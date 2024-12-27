@@ -2,6 +2,9 @@ from machine import Pin, PWM
 from time import sleep
 from MPU_data import MPU6050DATA
 
+# main.py before 12.21
+# Run everything sequencially 
+
 led = Pin(25, Pin.OUT)
 
 mpu = MPU6050DATA(id=0, sda=12, scl=13)

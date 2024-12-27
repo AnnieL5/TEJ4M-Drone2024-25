@@ -14,7 +14,8 @@ class MPU6050DATA():
     gyroAngle = [0,0,0]
     pastTime = 0
     
-    maxTilt = 20
+    maxSpeed = 20
+    maxAngle = 20
     
     def __init__(self, id, sda, scl):
         # Set up the I2C interfac
@@ -28,12 +29,14 @@ class MPU6050DATA():
         # wake up the MPU6050 from sleep
         self.mpu.wake()
         
-        self.gyroOFS = [0,0,0]
-        self.acceOFS = [0,0,0]
-         
-        self.gyroAngle = [0,0,0]
-        self.pastTime = 0
-        print(str(self.mpu.read_gyro_range()))
+        self.mpu.write_lpf_range(5) # Turning the low pass filter setting to level 5 (out of 6)
+        
+#         self.gyroOFS = [0,0,0]
+#         self.acceOFS = [0,0,0]
+#          
+#         self.gyroAngle = [0,0,0]
+#         self.pastTime = 0
+        # print(str(self.mpu.read_gyro_range()))
     #co/ntinuously print the data
     # while True:
     def readData(self):
@@ -62,7 +65,7 @@ class MPU6050DATA():
             self.gyroOFS = [self.gyroOFS[j] + data[j] for j in range(3)]
             
         self.gyroOFS = [self.gyroOFS[i] / 100.0 for i in range(3)]
-        print(str(self.gyroOFS))
+        # print(str(self.gyroOFS))
         
         self.gyroAngle = [0,0,0]
         #self.pastTime = ticks_ms()
@@ -72,9 +75,15 @@ class MPU6050DATA():
     def calibrateAcce(self):
         self.acceOFS = self.mpu.read_gyro_data()
         
-    def checkRotation(self):
+    def checkRotationSpeed(self):
         for i in self.getGyro():
-            if(i> self.maxTilt):
+            if(abs(i)> self.maxSpeed):
+                return True
+        return False
+    
+    def checkRotationAngle(self):
+        for i in self.getAngle()[0:2]:
+            if(abs(i)> self.maxAngle):
                 return True
         return False
     
@@ -86,14 +95,17 @@ class MPU6050DATA():
         
         sleep(0.005)
     
-mpu = MPU6050DATA(0, 12, 13)
-mpu.calibrateGyro()
-print(str(mpu.getAngle()))
-
-#while True:
-    #mpu.readData()
-#    mpu.updateAngle()
-#    print(str(mpu.getAngle()))
+# mpu = MPU6050DATA(0, 12, 13)
+# mpu.calibrateGyro()
+# # print(str(mpu.getAngle()))
+# 
+# while True:
+#     #mpu.readData()
+#     mpu.updateAngle()
+#     angle = mpu.getAngle()
+#     print(str(angle))
+#     sleep(0.1)
+#     print(str(mpu.checkRotationAngle()))
 # if len(devices) == 0:
 #     print("No I2C devices found.")
 # else:

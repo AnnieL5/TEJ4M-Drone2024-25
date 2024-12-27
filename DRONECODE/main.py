@@ -10,10 +10,12 @@ led = Pin(25, Pin.OUT)
 
 mpu = MPU6050DATA(id=0, sda=12, scl=13)
 
-esc_1 = PWM(Pin(14))
-esc_2 = PWM(Pin(2))
-esc_3 = PWM(Pin(16))
-esc_4 = PWM(Pin(28))
+esc_1 = PWM(Pin(14)) # Top Left
+esc_2 = PWM(Pin(2)) # bottom left
+esc_3 = PWM(Pin(16)) # Top right
+esc_4 = PWM(Pin(28)) # Bottom right
+
+# esc = [esc_1, esc_2, esc_3, esc_4]
 
 esc_1.freq(50)
 esc_2.freq(50)
@@ -23,12 +25,12 @@ esc_4.freq(50)
 period_ms = 20
 min_throttle = int ((1/ period_ms) * 65535)
 goal_throttle = int ((1.35/ period_ms) * 65535)
-add_throttle = int ((0.01/ period_ms) * 65535)
+add_throttle = int ((0.03/ period_ms) * 65535)
 #improvements
 steps = 100  # Define the number of steps
 duty_step = (goal_throttle - min_throttle) // steps
 
-maxThrottleDuration = 2 * 1000 # in ms
+maxThrottleDuration = 3 * 1000 # in ms
 hasTilted = False
 
 on = True
@@ -53,18 +55,38 @@ try:
     esc_3.duty_u16(min_throttle)
     esc_4.duty_u16(min_throttle)
     
-    mpu.calibrateGyro()
-    
     sleep (10)
     
-    while(on):
-        if(takeOff): #while taking off
+#     for duty_cycle in range(min_throttle, goal_throttle + duty_step, duty_step): #check notes document for why max throttle + duty_step
+#         esc_1.duty_u16(duty_cycle)
+#         esc_2.duty_u16(duty_cycle)
+#         esc_3.duty_u16(duty_cycle)
+#         esc_4.duty_u16(duty_cycle + int(add_throttle))
+#         if(mpu.checkRotationSpeed()): 
+#             stopAll() #Stop all motors if it tilts
+#             hasTilted = True
+#             break  
+#         sleep(0.05)
+        
+    on = True
+    duty_cycle = min_throttle
+    # duty_cycle= goal_throttle
+    endHoverTime = ticks_add(ticks_ms(), maxThrottleDuration)
+    
+    mpu.calibrateGyro()
+
+    while True:
+        led.value(0)
+        # sleep(0.05)
+        # break
+        if takeOff: #while taking off
         #for duty_cycle in range(min_throttle, goal_throttle + duty_step, duty_step): #check notes document for why max throttle + duty_step
             # set motors to duty cyle - first time at min throttle
-            esc_1.duty_u16(duty_cycle)
+            # print(str(duty_cycle))
+            esc_1.duty_u16(duty_cycle + add_throttle)
             esc_2.duty_u16(duty_cycle)
             esc_3.duty_u16(duty_cycle)
-            esc_4.duty_u16(duty_cycle + int(add_throttle))
+            esc_4.duty_u16(duty_cycle)
             
             if(duty_cycle >= goal_throttle): # if reached goal throttle
                 takeOff = False # Change state 
@@ -72,28 +94,27 @@ try:
             else:
                 duty_cycle += duty_step # if it has not reach goal throttle, keep increasing speed
                         
-        elif(landing):
+        elif landing:
             # for duty_cycle in range(goal_throttle + duty_step, min_throttle, -duty_step):
             # set motors to duty cyle - first time at goal throttle
-            esc_1.duty_u16(duty_cycle)
+            esc_1.duty_u16(duty_cycle + add_throttle)
             esc_2.duty_u16(duty_cycle)
             esc_3.duty_u16(duty_cycle)
-            esc_4.duty_u16(duty_cycle + add_throttle)
+            esc_4.duty_u16(duty_cycle)
                 
-            if(duty_cycle <= min_throttle): ## if passed min throttle
+            if duty_cycle <= min_throttle: ## if passed min throttle
                 landing = False
                 break # Break out of loop if landed
             else:
                 duty_cycle -= duty_step # decrease duty cycle
                         
         else:
-            # esc_1.duty_u16(goal_throttle)
-            # esc_2.duty_u16(goal_throttle)
-            # esc_3.duty_u16(goal_throttle)
-            # esc_4.duty_u16(goal_throttle + add_throttle)
+#             esc_1.duty_u16(goal_throttle)
+#             esc_2.duty_u16(goal_throttle)
+#             esc_3.duty_u16(goal_throttle)
+#             esc_4.duty_u16(goal_throttle + add_throttle)
         
             # for i in range(maxThrottleDuration*4):
-                        
             if(ticks_diff(endHoverTime, ticks_ms()) <= 0): # check how long it hovered
                 landing = True # change to landing if hovered for enough time
         
@@ -101,14 +122,15 @@ try:
         #mpu.readData()
         mpu.updateAngle()
         print(str(duty_cycle))
-        print(str(mpu.getAngle()))
+        # print(str(mpu.getAngle()))
         if(mpu.checkRotationAngle()): 
                 stopAll() 
                 hasTilted = True
                 break
         
-        sleep(0.05)
-            
+        sleep(0.01)
+        
+    stopAll()        
     led.toggle()
     print('Finished')
 except KeyboardInterrupt:
@@ -116,4 +138,3 @@ except KeyboardInterrupt:
     esc.duty_u16(0)
     print(esc)
     esc.deinit()
-
