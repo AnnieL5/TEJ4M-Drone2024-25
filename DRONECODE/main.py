@@ -10,10 +10,10 @@ led = Pin(25, Pin.OUT)
 
 mpu = MPU6050DATA(id=0, sda=12, scl=13)
 
-esc_1 = PWM(Pin(14)) # Top Left
-esc_2 = PWM(Pin(2)) # bottom left
-esc_3 = PWM(Pin(16)) # Top right
-esc_4 = PWM(Pin(28)) # Bottom right
+esc_1 = PWM(Pin(14)) # Top Left - weaker one
+esc_2 = PWM(Pin(2)) # bottom left - ccw
+esc_3 = PWM(Pin(28)) # Bottom right
+esc_4 = PWM(Pin(16)) # Top right - ccw
 
 # esc = [esc_1, esc_2, esc_3, esc_4]
 
@@ -39,11 +39,17 @@ landing = False
 duty_cycle = min_throttle
 endHoverTime = 0
 
-def stopAll():
+def stopAll() -> None:
     esc_1.duty_u16(min_throttle)
     esc_2.duty_u16(min_throttle)
     esc_3.duty_u16(min_throttle)
     esc_4.duty_u16(min_throttle)
+
+def setThrottle(throttle) -> None:
+    esc_1.duty_u16(duty_cycle + add_throttle)
+    esc_2.duty_u16(duty_cycle)
+    esc_3.duty_u16(duty_cycle)
+    esc_4.duty_u16(duty_cycle)
 
 try:
 
@@ -56,21 +62,9 @@ try:
     esc_4.duty_u16(min_throttle)
     
     sleep (10)
-    
-#     for duty_cycle in range(min_throttle, goal_throttle + duty_step, duty_step): #check notes document for why max throttle + duty_step
-#         esc_1.duty_u16(duty_cycle)
-#         esc_2.duty_u16(duty_cycle)
-#         esc_3.duty_u16(duty_cycle)
-#         esc_4.duty_u16(duty_cycle + int(add_throttle))
-#         if(mpu.checkRotationSpeed()): 
-#             stopAll() #Stop all motors if it tilts
-#             hasTilted = True
-#             break  
-#         sleep(0.05)
         
     on = True
     duty_cycle = min_throttle
-    # duty_cycle= goal_throttle
     endHoverTime = ticks_add(ticks_ms(), maxThrottleDuration)
     
     mpu.calibrateGyro()
@@ -83,10 +77,8 @@ try:
         #for duty_cycle in range(min_throttle, goal_throttle + duty_step, duty_step): #check notes document for why max throttle + duty_step
             # set motors to duty cyle - first time at min throttle
             # print(str(duty_cycle))
-            esc_1.duty_u16(duty_cycle + add_throttle)
-            esc_2.duty_u16(duty_cycle)
-            esc_3.duty_u16(duty_cycle)
-            esc_4.duty_u16(duty_cycle)
+
+            setThrottle(duty_cycle)
             
             if(duty_cycle >= goal_throttle): # if reached goal throttle
                 takeOff = False # Change state 
@@ -97,10 +89,7 @@ try:
         elif landing:
             # for duty_cycle in range(goal_throttle + duty_step, min_throttle, -duty_step):
             # set motors to duty cyle - first time at goal throttle
-            esc_1.duty_u16(duty_cycle + add_throttle)
-            esc_2.duty_u16(duty_cycle)
-            esc_3.duty_u16(duty_cycle)
-            esc_4.duty_u16(duty_cycle)
+            setThrottle(duty_cycle)
                 
             if duty_cycle <= min_throttle: ## if passed min throttle
                 landing = False
