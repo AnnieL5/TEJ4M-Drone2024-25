@@ -5,6 +5,7 @@ from MPU_data import MPU6050DATA
 # From 12.21
 # - with a while loop
 # - detects angle instead of angular speed
+# - with PID
 # Future: add error value. To be controller - gyro data
 # 		  add pid for yaw & kd
 
@@ -21,6 +22,9 @@ esc_1.freq(50)
 esc_2.freq(50)
 esc_3.freq(50)
 esc_4.freq(50)
+
+# Open file to log data
+file = open('data.txt', 'w') # mode(r, a, w, x, t,b)  could be to read, write, update
 
 period_ms = 20
 max_throttle = int ((2/ period_ms) * 65535)
@@ -105,14 +109,14 @@ try:
         pitch_i:float = pitch_last_integral + (angle[0] * pid_pitch_ki)
         pitch_i = max(min(pitch_i, i_limit), -i_limit) # constrain within I-term limits
         # pitch_d:float = pid_pitch_kd * (error_rate_pitch - pitch_last_error) / cycle_time_seconds
-        pid_pitch = pitch_p + pitch_i # + pitch_d
+        pid_pitch = pitch_p # + pitch_i # + pitch_d
         
          # roll PID calc
         roll_p:float = angle[1] * pid_roll_kp
         roll_i:float = roll_last_integral + (angle[1] * pid_roll_ki)
         roll_i = max(min(roll_i, i_limit), -i_limit) # constrain within I-term limits
         # roll_d:float = pid_roll_kd * (error_rate_roll - roll_last_error) / cycle_time_seconds
-        pid_roll:float = roll_p + roll_i # + roll_d
+        pid_roll:float = roll_p # + roll_i # + roll_d
         
         t1:int = int(duty_cycle - pid_pitch - pid_roll) # - pid_yaw_kp*angle[2]
         t2:int = int(duty_cycle + pid_pitch - pid_roll) # + pid_yaw_kp*angle[2] 
@@ -183,6 +187,9 @@ try:
         # print(str(duty_cycle))
         # print(str(mpu.getAngle()))
         print([t1,t2,t3,t4])
+        # write to file - angle then throttle for each motor
+        file.write(f"{angle[0]}, {angle[1]}, {angle[2]}\n")
+        file.write(f"{t1}, {t2}, {t3}, {t4}\n")
         if(mpu.checkRotationAngle()): 
                 stopAll() 
                 hasTilted = True
@@ -194,6 +201,7 @@ try:
     stopAll()        
     led.toggle()
     print('Finished')
+    file.close()
     
 except KeyboardInterrupt:
     print("Keyboard interrupt")
