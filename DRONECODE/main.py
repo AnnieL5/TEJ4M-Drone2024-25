@@ -15,8 +15,6 @@ esc_2 = PWM(Pin(2)) # bottom left - ccw
 esc_3 = PWM(Pin(28)) # Bottom right
 esc_4 = PWM(Pin(16)) # Top right - ccw
 
-# esc = [esc_1, esc_2, esc_3, esc_4]
-
 esc_1.freq(50)
 esc_2.freq(50)
 esc_3.freq(50)
@@ -24,7 +22,7 @@ esc_4.freq(50)
 
 period_ms = 20
 min_throttle = int ((1/ period_ms) * 65535)
-goal_throttle = int ((1.35/ period_ms) * 65535)
+goal_throttle = int ((1.34/ period_ms) * 65535)
 add_throttle = int ((0.03/ period_ms) * 65535)
 #improvements
 steps = 100  # Define the number of steps
@@ -38,6 +36,19 @@ takeOff = True
 landing = False
 duty_cycle = min_throttle
 endHoverTime = 0
+
+# PID Controller values
+pid_roll_kp:float = 4.5
+# pid_roll_ki:float = 0.00255
+# pid_roll_kd:float = 0.00002571429
+pid_pitch_kp:float = pid_roll_kp
+# pid_pitch_ki:float = pid_roll_ki
+# pid_pitch_kd:float = pid_roll_kd
+pid_yaw_kp:float = pid_roll_kp
+# pid_yaw_ki:float = 0.003428571
+# pid_yaw_kd:float = 0.0
+
+transition_throttle = int ((1.1/ period_ms) * 65535) # when it switch from motor set duty_cycle to adding pid values
 
 def stopAll() -> None:
     esc_1.duty_u16(min_throttle)
@@ -62,23 +73,31 @@ try:
     esc_4.duty_u16(min_throttle)
     
     sleep (10)
-        
-    on = True
-    duty_cycle = min_throttle
-    endHoverTime = ticks_add(ticks_ms(), maxThrottleDuration)
     
     mpu.calibrateGyro()
 
-    while True:
-        led.value(0)
-        # sleep(0.05)
-        # break
-        if takeOff: #while taking off
-        #for duty_cycle in range(min_throttle, goal_throttle + duty_step, duty_step): #check notes document for why max throttle + duty_step
-            # set motors to duty cyle - first time at min throttle
-            # print(str(duty_cycle))
+    while on:
+        # led.value(0)
+        
+        angle = mpu.getAngle()
+        t1:int = int(duty_cycle - pid_pitch_kp*angle[0] - pid_roll_kp*angle[1]) # - pid_yaw_kp*angle[2] 
+        t2:int = int(duty_cycle + pid_pitch_kp*angle[0] - pid_roll_kp*angle[1]) # + pid_yaw_kp*angle[2] 
+        t3:int = int(duty_cycle + pid_pitch_kp*angle[0] + pid_roll_kp*angle[1]) # - pid_yaw_kp*angle[2] 
+        t4:int = int(duty_cycle - pid_pitch_kp*angle[0] + pid_roll_kp*angle[1]) # + pid_yaw_kp*angle[2] 
 
-            setThrottle(duty_cycle)
+        if takeOff: #while taking off
+
+            # set motors to duty cyle - first time at min throttle
+            if duty_cycle > transition_throttle: # to prevent having a throttle < min throttle
+                esc_1.duty_u16(t1 + add_throttle)
+                esc_2.duty_u16(t2)
+                esc_3.duty_u16(t3)
+                esc_4.duty_u16(t4)
+            else: 
+                esc_1.duty_u16(duty_cycle + add_throttle)
+                esc_2.duty_u16(duty_cycle)
+                esc_3.duty_u16(duty_cycle)
+                esc_4.duty_u16(duty_cycle)
             
             if(duty_cycle >= goal_throttle): # if reached goal throttle
                 takeOff = False # Change state 
@@ -87,9 +106,17 @@ try:
                 duty_cycle += duty_step # if it has not reach goal throttle, keep increasing speed
                         
         elif landing:
-            # for duty_cycle in range(goal_throttle + duty_step, min_throttle, -duty_step):
             # set motors to duty cyle - first time at goal throttle
-            setThrottle(duty_cycle)
+            if duty_cycle > transition_throttle:
+                esc_1.duty_u16(t1 + add_throttle)
+                esc_2.duty_u16(t2)
+                esc_3.duty_u16(t3)
+                esc_4.duty_u16(t4)
+            else: 
+                esc_1.duty_u16(duty_cycle + add_throttle)
+                esc_2.duty_u16(duty_cycle)
+                esc_3.duty_u16(duty_cycle)
+                esc_4.duty_u16(duty_cycle)
                 
             if duty_cycle <= min_throttle: ## if passed min throttle
                 landing = False
@@ -98,23 +125,24 @@ try:
                 duty_cycle -= duty_step # decrease duty cycle
                         
         else:
-#             esc_1.duty_u16(goal_throttle)
-#             esc_2.duty_u16(goal_throttle)
-#             esc_3.duty_u16(goal_throttle)
-#             esc_4.duty_u16(goal_throttle + add_throttle)
+            esc_1.duty_u16(t1 + add_throttle)
+            esc_2.duty_u16(t2)
+            esc_3.duty_u16(t3)
+            esc_4.duty_u16(t4)
         
-            # for i in range(maxThrottleDuration*4):
             if(ticks_diff(endHoverTime, ticks_ms()) <= 0): # check how long it hovered
                 landing = True # change to landing if hovered for enough time
         
         #Stop all motors if it tilts
         #mpu.readData()
         mpu.updateAngle()
-        print(str(duty_cycle))
+        # print(str(duty_cycle))
         # print(str(mpu.getAngle()))
+        print([t1,t2,t3,t4])
         if(mpu.checkRotationAngle()): 
                 stopAll() 
                 hasTilted = True
+                led.toggle()
                 break
         
         sleep(0.01)
@@ -122,6 +150,7 @@ try:
     stopAll()        
     led.toggle()
     print('Finished')
+    
 except KeyboardInterrupt:
     print("Keyboard interrupt")
     esc.duty_u16(0)
