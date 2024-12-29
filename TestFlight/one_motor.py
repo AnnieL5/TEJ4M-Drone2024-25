@@ -1,14 +1,14 @@
 from machine import Pin, PWM
 from time import sleep
 
-esc = PWM(Pin(28))
+esc = PWM(Pin(16))
 led = Pin(25, Pin.OUT)
 
 esc.freq(50)
 
 period_ms = 20
 min_throttle = int ((1/ period_ms) * 65535)
-max_throttle = int ((1.3/ period_ms) * 65535)
+max_throttle = int ((1.2/ period_ms) * 65535)
 #improvements
 steps = 100  # Define the number of steps
 duty_step = (max_throttle - min_throttle) // steps
@@ -18,7 +18,7 @@ try:
     led.value(1)
     
     esc.duty_u16(min_throttle)
-    sleep (6)
+    sleep (10)
     
       # Increase the duty cycle gradually
     for duty_cycle in range(min_throttle, max_throttle + duty_step, duty_step): #check notes document for why max throttle + duty_step

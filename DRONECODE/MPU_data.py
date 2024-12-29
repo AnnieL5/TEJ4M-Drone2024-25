@@ -95,16 +95,16 @@ class MPU6050DATA():
         
         sleep(0.005)
     
-mpu = MPU6050DATA(0, 12, 13)
-mpu.calibrateGyro()
-# # print(str(mpu.getAngle()))
-# 
-while True:
-#     #mpu.readData()
-    mpu.updateAngle()
-    angle = mpu.getAngle()
-    print(str(angle))
-    sleep(0.1)
+# mpu = MPU6050DATA(0, 12, 13)
+# mpu.calibrateGyro()
+# # # # print(str(mpu.getAngle()))
+# # # 
+# while True:
+# #     #mpu.readData()
+#     mpu.updateAngle()
+#     angle = mpu.getAngle()
+#     print(str(angle))
+#     sleep(0.1)
 #     print(str(mpu.checkRotationAngle()))
 # if len(devices) == 0:
 #     print("No I2C devices found.")
