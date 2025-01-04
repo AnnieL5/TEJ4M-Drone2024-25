@@ -37,7 +37,7 @@ while True:
         print('Received something:')
         package = nrf.recv()
         #package_2 = r'package[0:9]'
-        # print(package) # includes invisible characters like \x00\x00
+        print(package) # includes invisible characters like \x00\x00
         msg=package.decode('utf-8')# [0:32] #type string
 
         #Python doesn't neqed the null terminator but to 32 ensures we don't accidentally truncate any data that was meant to be sent. 

@@ -7,14 +7,14 @@ class RFClass:
     #addresses
     pipes = (b'\xe1\xf0\xf0\xf0\xf0', b'\xd2\xf0\xf0\xf0\xf0')
     
-    msgLength = 31
+    msgLength = 4 #one less
 
     #setting up nrf24l01 object
     spi = SPI(0, sck=Pin(6), mosi=Pin(7), miso=Pin(4))
     #Keep csn & ce pins the same - do not change
     csn = Pin(14, mode=Pin.OUT, value=1)
     ce = Pin(17, mode=Pin.OUT, value=0)
-    nrf = NRF24L01(spi, csn, ce, channel=100, payload_size=(msgLength+1))
+    nrf = NRF24L01(spi, csn, ce, channel=100, payload_size=(32))
 
     
     def __init__(self):
@@ -58,20 +58,21 @@ class RFClass:
 #         else:
 #             print(msg)
 
-rf = RFClass()
 
-while True:
-    utime.sleep(1)
-    
-    if rf.existsMessage():
-        msg = rf.getMessage()
-    # open file in append mode and write the received message
-        if(msg[0]== "c"):
-            print('here')
-            break
-        else:
-            with open('rcvd.txt', 'a') as f: #automatically closes file after writing 
-                f.write(msg[0:4] + '\n')
-            print('Here2')
-    
-print('finish')  
+# rf = RFClass()
+# 
+# while True:
+#     utime.sleep(1)
+#     
+#     if rf.existsMessage():
+#         msg = rf.getMessage()
+#     # open file in append mode and write the received message
+#         if(msg[0]== "c"):
+#             print('here')
+#             break
+#         else:
+#             with open('rcvd.txt', 'a') as f: #automatically closes file after writing 
+#                 f.write(msg[0:4] + '\n')
+#             print('Here2')
+#     
+# print('finish')  

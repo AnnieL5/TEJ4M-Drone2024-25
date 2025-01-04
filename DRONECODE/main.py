@@ -1,6 +1,7 @@
 from machine import Pin, PWM
 from time import sleep, ticks_ms, ticks_add, ticks_diff
 from MPU_data import MPU6050DATA
+from RFClass import RFClass
 import os
 
 # From 1/1/2025
@@ -18,6 +19,7 @@ import os
 led = Pin(25, Pin.OUT)
 
 mpu = MPU6050DATA(id=0, sda=12, scl=13)
+rf = RFClass()
 
 esc_1 = PWM(Pin(15)) # Top Left - weaker one - changed to pin 15, originally pin 14 
 esc_2 = PWM(Pin(2)) # bottom left - ccw
@@ -55,8 +57,9 @@ takeOff = True #phase
 landing = False
 duty_cycle = min_throttle # starts with min throttle
 endHoverTime = 0 # assigns value after takeoff
-changeDutyCyle = False
+changeDutyCycle = False
 newest_goal = 0
+cmd_duty_step = 0
 prev_goal = goal_throttle
 
 # PID Controller values
@@ -94,15 +97,14 @@ def constrainThrottle(t1, t2, t3, t4): # constrain throttle to between min to ma
     t4 = max(min(t4, max_throttle), min_throttle) # constrain within throttle limits
     return t1,t2,t3,t4
 
-def getCmdThrottle(current_duty_cycle): # method that compares & sets the variables. Outside of the while loop
-    cmd_throttle = 0
-    cmd_duty_step = 0
-    if newest_goal != prev_goal: 
-        changeDutyCycle = True
-        cmd_throttle = newest_goal  # last line of file
-        cmd_duty_step = (cmd_throttle - current_duty_cycle) // steps # will be negative if cmd throttle is smaller
-        prev_goal = newest_goal
-    return cmd_throttle, cmd_duty_step, changeDutyCycle
+# def getCmdThrottle(current_duty_cycle, newest_goal): # method that compares & sets the variables. Outside of the while loop
+#     cmd_duty_step = 0
+#     if newest_goal != prev_goal: 
+#         # changeDutyCycle = True # repetitive
+#         # cmd_throttle = newest_goal  # last line of file
+#         cmd_duty_step = (cmd_throttle - current_duty_cycle) // steps # will be negative if cmd throttle is smaller
+#         prev_goal = newest_goal
+#     return cmd_duty_step
 
 try:
 
@@ -120,13 +122,15 @@ try:
     mpu.calibrateGyro()
     
     previous_time = ticks_ms()
+    
+    count = 0 # to decrease the frequency of checking rf
 
     while on:
         
         current_time = ticks_ms()
         
         angle = mpu.getAngle()
-        
+                
         #loop time
         loop_time = ticks_diff(current_time, previous_time) / 1000.0
         loop_time = max(loop_time, 1e-6)
@@ -167,12 +171,31 @@ try:
         
         t1,t2,t3,t4 = constrainThrottle(t1,t2,t3,t4)
         
-        
-        lines = rcvdFile.readlines()  
-        if lines:
-            last_file_line = float(lines[-1].strip())  # e.g. "1.3"
-            newest_goal = int ((last_file_line/ period_ms) * 65535)
-            print(newest_goal)
+        # Checks for any rf message
+        if rf.existsMessage():
+            print('here1')
+            newest_throttle = float(rf.getMessage())
+            print(newest_throttle)
+            if newest_throttle>=1 and newest_throttle<=2 and newest_throttle != prev_goal: #if between the allowed throttle range
+                if newest_throttle== 1.0:
+                    landing = True
+                else:
+                    count += 1
+                    changeDutyCycle = True
+                    newest_goal = int ((newest_throttle/ period_ms) * 65535)
+                    cycle_diff = (newest_goal - duty_cycle)
+                    if abs(cycle_diff) < 5:
+                        changeDutyCycle = False
+                    elif abs(cycle_diff/steps)<1:
+                        cmd_duty_step = 1 if (cycle_diff) > 0 else -1
+                    else:
+                        cmd_duty_step = cycle_diff//steps
+                    prev_goal = newest_throttle
+#         lines = rcvdFile.readlines()  
+#         if lines:
+#             last_file_line = float(lines[-1].strip())  # e.g. "1.3"
+#             newest_goal = int ((last_file_line/ period_ms) * 65535)
+#             print(newest_goal)
             
 #                # If there's a difference from the previous value, we set changeDutyCycle = True
 #             if prev_goal is None or newest_goal != prev_goal:
@@ -194,8 +217,6 @@ try:
 #             # No change from the previous line
 #             cmd_throttle = 0
 #             cmd_duty_step = 0
-
-        cmd_throttle, cmd_duty_step = getCmdThrottle(duty_cycle)
         
         if takeOff: #while taking off
 
@@ -237,15 +258,14 @@ try:
             else:
                 duty_cycle -= duty_step # decrease duty cycle
                         
-        elif changeDutyCycle: 
+        elif changeDutyCycle:
             # duty_cycle same during the first run, change afterwards
             esc_1.duty_u16(t1 + add_throttle)
             esc_2.duty_u16(t2)
             esc_3.duty_u16(t3)
             esc_4.duty_u16(t4)
-           
-            if (cmd_duty_step>0 and duty_cycle >= cmd_throttle) or (cmd_duty_step<0 and duty_cycle <= cmd_throttle): # if passed cmd throttle
-                changeDutyCyle = False # then it will run else
+            if (cmd_duty_step>0 and duty_cycle >= newest_goal) or (cmd_duty_step<0 and duty_cycle <= newest_goal): # if passed cmd throttle
+                changeDutyCycle = False # then it will run else
             else:
                 duty_cycle += cmd_duty_step # change duty cycle
         
@@ -269,12 +289,13 @@ try:
         mpu.updateAngle()
         # print(str(duty_cycle))
         #print(str(mpu.getAngle()))
-        #print([t1,t2,t3,t4])
+        print(count, [t1,t2,t3,t4], cmd_duty_step, duty_cycle)
+        print(takeOff, changeDutyCycle)
         # write to file - angle then throttle for each motor
-        angleFile.write(f"{angle[0]}, {angle[1]}, {angle[2]}, {cTime}\n")
-        throttleFile.write(f"{t1}, {t2}, {t3}, {t4}\n")
+#         angleFile.write(f"{angle[0]}, {angle[1]}, {angle[2]}, {current_time}\n")
+#         throttleFile.write(f"{t1}, {t2}, {t3}, {t4}\n")
         
-        sleep(0.001)
+        sleep(0.05)
         
     stopAll()      
     led.toggle()
