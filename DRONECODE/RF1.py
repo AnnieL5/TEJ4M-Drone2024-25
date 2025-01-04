@@ -24,6 +24,9 @@ nrf.open_tx_pipe(pipes[1])
 nrf.open_rx_pipe(1, pipes[0])
 nrf.start_listening()
 
+os.remove('rcvd.txt')
+f = open('rcvd.txt', 'a')
+
 print('RX Ready. Waiting for packets...')
 
 while True:
@@ -34,15 +37,25 @@ while True:
         print('Received something:')
         package = nrf.recv()
         #package_2 = r'package[0:9]'
-        msg=package.decode('utf-8')[0:32]
+        print(package)
+        msg=package.decode('utf-8')# [0:32] #type string
+        print(len(msg)) # for debug. It works
+        msg = msg.strip()
+        print(len(msg))
         #Python doesn't neqed the null terminator but to 32 ensures we don't accidentally truncate any data that was meant to be sent. 
         # open file in append mode and write the received message
-        with open('rcvd.txt', 'a') as f: #automatically closes file after writing 
-            f.write(msg + '\n')
-        print(f.read())
+        if(msg[0]== "c"):
+            print('here')
+            break
+        else:
+            with open('rcvd.txt', 'a') as f: #automatically closes file after writing 
+                f.write(msg[0])
+            print('Here2')
+        
+        #print(f.read())
 #         if msg.strip() == "":
 #             print("Empty Message")
 #         else:
 #             print(msg)
         
-    
+print('finish')  
