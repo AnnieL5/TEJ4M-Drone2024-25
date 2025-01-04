@@ -37,20 +37,16 @@ while True:
         print('Received something:')
         package = nrf.recv()
         #package_2 = r'package[0:9]'
-        print(package)
+        # print(package) # includes invisible characters like \x00\x00
         msg=package.decode('utf-8')# [0:32] #type string
-        print(len(msg)) # for debug. It works
-        msg = msg.strip()
-        print(len(msg))
+
         #Python doesn't neqed the null terminator but to 32 ensures we don't accidentally truncate any data that was meant to be sent. 
         # open file in append mode and write the received message
-        if(msg[0]== "c"):
-            print('here')
+        if(msg[0]== "c"): #if we want the program to stop
             break
         else:
             with open('rcvd.txt', 'a') as f: #automatically closes file after writing 
                 f.write(msg[0])
-            print('Here2')
         
         #print(f.read())
 #         if msg.strip() == "":
