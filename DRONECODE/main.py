@@ -44,12 +44,16 @@ rcvdFile = open('rcvd.txt','r')
 period_ms = 20
 max_throttle = int ((2/ period_ms) * 65535)
 min_throttle = int ((1/ period_ms) * 65535)
-goal_throttle = int ((1.34/ period_ms) * 65535)
-add_throttle = int ((0.035/ period_ms) * 65535)
+goal_throttle = int ((1.38/ period_ms) * 65535)
+# offset for each motor
+t1_ofs_throttle = int ((0.035/ period_ms) * 65535)
+t2_ofs_throttle = int ((0.0/ period_ms) * 65535)
+t3_ofs_throttle = int ((0.01/ period_ms) * 65535)
+t4_ofs_throttle = int ((0.01/ period_ms) * 65535)
 steps = 100  # Define the number of steps
 duty_step = (goal_throttle - min_throttle) // steps
 
-maxThrottleDuration = 5 * 1000 # in ms
+maxThrottleDuration = 3 * 1000 # in ms
 hasTilted = False
 
 on = True # from user input. Starts the drone
@@ -97,20 +101,10 @@ def constrainThrottle(t1, t2, t3, t4): # constrain throttle to between min to ma
     t4 = max(min(t4, max_throttle), min_throttle) # constrain within throttle limits
     return t1,t2,t3,t4
 
-# def getCmdThrottle(current_duty_cycle, newest_goal): # method that compares & sets the variables. Outside of the while loop
-#     cmd_duty_step = 0
-#     if newest_goal != prev_goal: 
-#         # changeDutyCycle = True # repetitive
-#         # cmd_throttle = newest_goal  # last line of file
-#         cmd_duty_step = (cmd_throttle - current_duty_cycle) // steps # will be negative if cmd throttle is smaller
-#         prev_goal = newest_goal
-#     return cmd_duty_step
-
 try:
 
     led.value(1)
 
-    
     # set all motors to min throttle
     esc_1.duty_u16(min_throttle)
     esc_2.duty_u16(min_throttle)
@@ -123,7 +117,7 @@ try:
     
     previous_time = ticks_ms()
     
-    count = 0 # to decrease the frequency of checking rf
+    count = 0 # to count how many message received. For debugging
 
     while on:
         
@@ -159,10 +153,10 @@ try:
         previous_time = current_time
         
         # calculate the throttle for each motor - t1 matches with esc_1
-        t1 = int(duty_cycle - pid_pitch - pid_roll + pid_yaw)  # Motor 1
-        t2 = int(duty_cycle + pid_pitch - pid_roll - pid_yaw)  # Motor 2
-        t3 = int(duty_cycle + pid_pitch + pid_roll + pid_yaw)  # Motor 3
-        t4 = int(duty_cycle - pid_pitch + pid_roll - pid_yaw)  # Motor 4
+        t1 = t1_ofs_throttle + int(duty_cycle - pid_pitch - pid_roll + pid_yaw)  # Motor 1
+        t2 = t2_ofs_throttle + int(duty_cycle + pid_pitch - pid_roll - pid_yaw)  # Motor 2
+        t3 = t3_ofs_throttle + int(duty_cycle + pid_pitch + pid_roll + pid_yaw)  # Motor 3
+        t4 = t4_ofs_throttle + int(duty_cycle - pid_pitch + pid_roll - pid_yaw)  # Motor 4
 
         # t1:int = int(duty_cycle - pid_pitch - pid_roll) # - pid_yaw_kp*angle[2]
         # t2:int = int(duty_cycle + pid_pitch - pid_roll) # + pid_yaw_kp*angle[2] 
@@ -173,24 +167,25 @@ try:
         
         # Checks for any rf message
         if rf.existsMessage():
-            print('here1')
-            newest_throttle = float(rf.getMessage())
-            print(newest_throttle)
+            # newest_throttle: similar to 1.1. newest_goal: after calculation like 4320
+            newest_throttle = float(rf.getMessage()) # gets the message
             if newest_throttle>=1 and newest_throttle<=2 and newest_throttle != prev_goal: #if between the allowed throttle range
                 if newest_throttle== 1.0:
-                    landing = True
+                    landing = True # change to landing if received a message stating 1.00
                 else:
-                    count += 1
+                    count += 1 # for debug
                     changeDutyCycle = True
-                    newest_goal = int ((newest_throttle/ period_ms) * 65535)
-                    cycle_diff = (newest_goal - duty_cycle)
+                    newest_goal = int ((newest_throttle/ period_ms) * 65535) # find the goal throttle
+                    cycle_diff = (newest_goal - duty_cycle) 
                     if abs(cycle_diff) < 5:
-                        changeDutyCycle = False
+                        changeDutyCycle = False # such a minor change
                     elif abs(cycle_diff/steps)<1:
-                        cmd_duty_step = 1 if (cycle_diff) > 0 else -1
+                        cmd_duty_step = 1 if (cycle_diff) > 0 else -1 # the smallest step is 1 or -1
                     else:
                         cmd_duty_step = cycle_diff//steps
                     prev_goal = newest_throttle
+                    
+#         Can I delete this?            
 #         lines = rcvdFile.readlines()  
 #         if lines:
 #             last_file_line = float(lines[-1].strip())  # e.g. "1.3"
@@ -222,19 +217,19 @@ try:
 
             # set motors to duty cyle - first time at min throttle
             if duty_cycle > transition_throttle: # to prevent having a throttle < min throttle and having a large angle error that might affect take off
-                esc_1.duty_u16(t1 + add_throttle)
+                esc_1.duty_u16(t1)
                 esc_2.duty_u16(t2)
                 esc_3.duty_u16(t3)
                 esc_4.duty_u16(t4)
             else: 
-                esc_1.duty_u16(duty_cycle + add_throttle)
-                esc_2.duty_u16(duty_cycle)
-                esc_3.duty_u16(duty_cycle)
-                esc_4.duty_u16(duty_cycle)
+                esc_1.duty_u16(duty_cycle + t1_ofs_throttle)
+                esc_2.duty_u16(duty_cycle + t2_ofs_throttle)
+                esc_3.duty_u16(duty_cycle + t3_ofs_throttle)
+                esc_4.duty_u16(duty_cycle + t4_ofs_throttle)
             
             if(duty_cycle >= goal_throttle): # if reached goal throttle
                 takeOff = False # Change state 
-                #endHoverTime = ticks_add(cTime, maxThrottleDuration) #find endtime
+                endHoverTime = ticks_add(current_time, maxThrottleDuration) #find endtime
             else:
                 duty_cycle += duty_step # if it has not reach goal throttle, keep increasing speed
                         
@@ -242,15 +237,15 @@ try:
             
             # set motors to duty cyle - first time at goal throttle
             if duty_cycle > transition_throttle:
-                esc_1.duty_u16(t1 + add_throttle)
+                esc_1.duty_u16(t1)
                 esc_2.duty_u16(t2)
                 esc_3.duty_u16(t3)
                 esc_4.duty_u16(t4)
             else: 
-                esc_1.duty_u16(duty_cycle + add_throttle)
-                esc_2.duty_u16(duty_cycle)
-                esc_3.duty_u16(duty_cycle)
-                esc_4.duty_u16(duty_cycle)
+                esc_1.duty_u16(duty_cycle + t1_ofs_throttle)
+                esc_2.duty_u16(duty_cycle + t2_ofs_throttle)
+                esc_3.duty_u16(duty_cycle + t3_ofs_throttle)
+                esc_4.duty_u16(duty_cycle + t4_ofs_throttle)
                 
             if duty_cycle <= min_throttle: ## if passed min throttle
                 landing = False
@@ -260,7 +255,7 @@ try:
                         
         elif changeDutyCycle:
             # duty_cycle same during the first run, change afterwards
-            esc_1.duty_u16(t1 + add_throttle)
+            esc_1.duty_u16(t1)
             esc_2.duty_u16(t2)
             esc_3.duty_u16(t3)
             esc_4.duty_u16(t4)
@@ -271,10 +266,13 @@ try:
         
         else:
             #stay at same throttle 
-            esc_1.duty_u16(t1 + add_throttle)
+            esc_1.duty_u16(t1)
             esc_2.duty_u16(t2)
             esc_3.duty_u16(t3)
             esc_4.duty_u16(t4)
+            
+#             if(ticks_diff(endHoverTime, current_time) <= 0): # check how long it hovered
+#                 landing = True # change to landing if hovered for enough time
         
         # Save state values for next loop
         roll_last_error = angle[1]
@@ -290,12 +288,18 @@ try:
         # print(str(duty_cycle))
         #print(str(mpu.getAngle()))
         print(count, [t1,t2,t3,t4], cmd_duty_step, duty_cycle)
-        print(takeOff, changeDutyCycle)
+#         print(takeOff, changeDutyCycle)
         # write to file - angle then throttle for each motor
-#         angleFile.write(f"{angle[0]}, {angle[1]}, {angle[2]}, {current_time}\n")
-#         throttleFile.write(f"{t1}, {t2}, {t3}, {t4}\n")
+        angleFile.write(f"{angle[0]}, {angle[1]}, {angle[2]}, {current_time}\n")
+        throttleFile.write(f"{t1}, {t2}, {t3}, {t4}\n")
         
-        sleep(0.05)
+        if(mpu.checkRotationAngle()): 
+            stopAll() 
+            hasTilted = True
+            led.toggle()
+            break
+        
+        sleep(0.005)
         
     stopAll()      
     led.toggle()
