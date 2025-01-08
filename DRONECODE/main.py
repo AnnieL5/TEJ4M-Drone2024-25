@@ -44,7 +44,7 @@ rcvdFile = open('rcvd.txt','r')
 period_ms = 20
 max_throttle = int ((2/ period_ms) * 65535)
 min_throttle = int ((1/ period_ms) * 65535)
-goal_throttle = int ((1.38/ period_ms) * 65535)
+goal_throttle = int ((1.35/ period_ms) * 65535)
 # offset for each motor
 t1_ofs_throttle = int ((0.035/ period_ms) * 65535)
 t2_ofs_throttle = int ((0.0/ period_ms) * 65535)
