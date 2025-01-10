@@ -91,8 +91,9 @@ while keepPlaying:
 
             # print(f'{pitch}, {roll}, {yaw}')
             # print(f'{t1}, {t2}, {t3}, {t4}')
+    message = f'{on}, {t1*100:.0f}, {t2*100:.0f}, {t3*100:.0f}, {t4*100:.0f}' 
     print(message)
-    message = f'{on}{t1*100:.0f}{t2*100:.0f}{t3*100:.0f}{t4*100:.0f}' 
+    
     arduino.write(message.encode())
 
 
