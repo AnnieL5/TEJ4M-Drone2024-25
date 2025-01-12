@@ -15,7 +15,8 @@ class RFClass:
     csn = Pin(14, mode=Pin.OUT, value=1)
     ce = Pin(17, mode=Pin.OUT, value=0)
     nrf = NRF24L01(spi, csn, ce, channel=100, payload_size=(32))
-
+    
+    message = "000000000" # Default
     
     def __init__(self):
 
@@ -42,16 +43,32 @@ class RFClass:
         else:
             return False
         
-    def getMessage(self) -> str:
+    def updateMessage(self) -> None:
         print('Received something:')
         package = self.nrf.recv()
         #package_2 = r'package[0:9]'
         print(package)
-        msg=package.decode('utf-8')[0:self.msgLength] #type string
+        self.message = package.decode('utf-8')[0:self.msgLength] #type string
         #Python doesn't neqed the null terminator but to 32 ensures we don't accidentally truncate any data that was meant to be sent. 
+
         
-        return msg        
-        
+    def getMessage(self) -> str:
+        return self.message
+    
+    def getState(self) -> bool:
+        return bool(self.message[0])
+    
+    def getPitch(self) -> int:
+        return int(self.message[1:3])
+    
+    def getRoll(self) -> int:
+        return int(self.message[3:5])
+    
+    def getYaw(self) -> int:
+        return int(self.message[5:7])
+    
+    def getThrottle(self) -> int:
+        return int(self.message[7:9])
         #print(f.read())
 #         if msg.strip() == "":
 #             print("Empty Message")
