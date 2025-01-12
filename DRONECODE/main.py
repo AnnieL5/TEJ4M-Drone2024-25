@@ -53,7 +53,7 @@ t4_ofs_throttle = int ((0.01/ period_ms) * 65535)
 steps = 100  # Define the number of steps
 duty_step = (goal_throttle - min_throttle) // steps
 
-maxThrottleDuration = 3 * 1000 # in ms
+maxThrottleDuration = 4 * 1000 # in ms
 hasTilted = False
 
 on = True # from user input. Starts the drone
@@ -67,15 +67,15 @@ cmd_duty_step = 0
 prev_goal = goal_throttle
 
 # PID Controller values
-pid_roll_kp:float = 4.0
-pid_roll_ki:float = 0.4
-pid_roll_kd:float = 0.5
-pid_pitch_kp:float = pid_roll_kp
-pid_pitch_ki:float = pid_roll_ki
-pid_pitch_kd:float = pid_roll_kd
-pid_yaw_kp:float = 6.0
-pid_yaw_ki:float = 0.1
-pid_yaw_kd:float = 0.5
+pid_pitch_kp:float = 5#5.5
+pid_pitch_ki:float = 0#.4
+pid_pitch_kd:float = 0#.5
+pid_roll_kp:float = 2#1.0
+pid_roll_ki:float = 0#.4
+pid_roll_kd:float = 0#.5
+pid_yaw_kp:float = 0#1.0
+pid_yaw_ki:float = 0#.1
+pid_yaw_kd:float = 0#.5
 
 i_limit = 30 # max value i can reach
 
@@ -271,8 +271,8 @@ try:
             esc_3.duty_u16(t3)
             esc_4.duty_u16(t4)
             
-#             if(ticks_diff(endHoverTime, current_time) <= 0): # check how long it hovered
-#                 landing = True # change to landing if hovered for enough time
+            if(ticks_diff(endHoverTime, current_time) <= 0): # check how long it hovered
+                landing = True # change to landing if hovered for enough time
         
         # Save state values for next loop
         roll_last_error = angle[1]
@@ -312,3 +312,5 @@ except KeyboardInterrupt:
     esc.duty_u16(0) # didn't fix it yet
     print(esc)
     esc.deinit()
+
+
