@@ -7,7 +7,7 @@ class RFClass:
     #addresses
     pipes = (b'\xe1\xf0\xf0\xf0\xf0', b'\xd2\xf0\xf0\xf0\xf0')
     
-    msgLength = 4 #one less
+    msgLength = 9 #one less
 
     #setting up nrf24l01 object
     spi = SPI(0, sck=Pin(6), mosi=Pin(7), miso=Pin(4))
