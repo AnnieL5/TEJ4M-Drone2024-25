@@ -4,12 +4,13 @@ from MPU_data import MPU6050DATA
 from RFClass import RFClass
 import os
 
-# From 1/1/2025 - 1/12/2025
+# From 1/12/2025
 # - with a while loop
 # - detects angle instead of angular speed
 # - with PID
 # - DOWNLOAD THE FILE BEFORE UNPLUGGING THE BATTERY
-# - add in RF message to adjust throttle - 4 char message i.e. 1.23
+# - add in RF message to include controller adjustments
+#     [0] take off/landing, [1:3] pitch, [3:5] roll, [5:7] yaw, [7:9] throttle adjustment (+-0.01 by each click)
 
 # Future: add error value. To be controller - gyro data
 # 		  add pid for yaw & kd
@@ -119,12 +120,28 @@ try:
     previous_time = ticks_ms()
     
     count = 0 # to count how many message received. For debugging
-
-    while on:
+    
+    while not takeOff: # wait for take off signal
+        if rf.existsMessage():
+            rf.updateMessage()
+            takeOff = rf.getState()
+            print("Taking off")
+    
+    while True:
         
         current_time = ticks_ms()
         
-        angle = mpu.getAngle()
+        # Checks for any rf message
+        if rf.existsMessage():
+            # newest_throttle: similar to 1.1. newest_goal: after calculation like 4320
+            rf.updateMessage()
+            if rf.getState == 0: # land
+                takeOff = False
+                landing = True
+            else:
+                duty_cycle = 1 + rf.getThrottle() / 100 # Calculate new duty_cycle from 1.00 to 2.00
+        
+        angle = [(rf.getPitch(), rf.getRoll(), rf.getYaw())[i] - mpu.getAngle()[i] for i in range(3)] # get difference between controller's goal and current angle
                 
         #loop time
         loop_time = ticks_diff(current_time, previous_time) / 1000.0
@@ -166,25 +183,6 @@ try:
         
         t1,t2,t3,t4 = constrainThrottle(t1,t2,t3,t4)
         
-        # Checks for any rf message
-        if rf.existsMessage():
-            # newest_throttle: similar to 1.1. newest_goal: after calculation like 4320
-            newest_throttle = float(rf.getMessage()) # gets the message
-            if newest_throttle>=1 and newest_throttle<=2 and newest_throttle != prev_goal: #if between the allowed throttle range
-                if newest_throttle== 1.0:
-                    landing = True # change to landing if received a message stating 1.00
-                else:
-                    count += 1 # for debug
-                    changeDutyCycle = True
-                    newest_goal = int ((newest_throttle/ period_ms) * 65535) # find the goal throttle
-                    cycle_diff = (newest_goal - duty_cycle) 
-                    if abs(cycle_diff) < 5:
-                        changeDutyCycle = False # such a minor change
-                    elif abs(cycle_diff/steps)<1:
-                        cmd_duty_step = 1 if (cycle_diff) > 0 else -1 # the smallest step is 1 or -1
-                    else:
-                        cmd_duty_step = cycle_diff//steps
-                    prev_goal = newest_throttle
                     
 #         Can I delete this?            
 #         lines = rcvdFile.readlines()  
@@ -230,7 +228,7 @@ try:
             
             if(duty_cycle >= goal_throttle): # if reached goal throttle
                 takeOff = False # Change state 
-                endHoverTime = ticks_add(current_time, maxThrottleDuration) #find endtime
+                # endHoverTime = ticks_add(current_time, maxThrottleDuration) #find endtime
             else:
                 duty_cycle += duty_step # if it has not reach goal throttle, keep increasing speed
                         
@@ -254,16 +252,16 @@ try:
             else:
                 duty_cycle -= duty_step # decrease duty cycle
                         
-        elif changeDutyCycle:
-            # duty_cycle same during the first run, change afterwards
-            esc_1.duty_u16(t1)
-            esc_2.duty_u16(t2)
-            esc_3.duty_u16(t3)
-            esc_4.duty_u16(t4)
-            if (cmd_duty_step>0 and duty_cycle >= newest_goal) or (cmd_duty_step<0 and duty_cycle <= newest_goal): # if passed cmd throttle
-                changeDutyCycle = False # then it will run else
-            else:
-                duty_cycle += cmd_duty_step # change duty cycle
+        # elif changeDutyCycle:
+        #     # duty_cycle same during the first run, change afterwards
+        #     esc_1.duty_u16(t1)
+        #     esc_2.duty_u16(t2)
+        #     esc_3.duty_u16(t3)
+        #     esc_4.duty_u16(t4)
+        #     if (cmd_duty_step>0 and duty_cycle >= newest_goal) or (cmd_duty_step<0 and duty_cycle <= newest_goal): # if passed cmd throttle
+        #         changeDutyCycle = False # then it will run else
+        #     else:
+        #         duty_cycle += cmd_duty_step # change duty cycle
         
         else:
             #stay at same throttle 
@@ -272,8 +270,8 @@ try:
             esc_3.duty_u16(t3)
             esc_4.duty_u16(t4)
             
-            if(ticks_diff(endHoverTime, current_time) <= 0): # check how long it hovered
-                landing = True # change to landing if hovered for enough time
+            # if(ticks_diff(endHoverTime, current_time) <= 0): # check how long it hovered
+            #     landing = True # change to landing if hovered for enough time
         
         # Save state values for next loop
         roll_last_error = angle[1]
