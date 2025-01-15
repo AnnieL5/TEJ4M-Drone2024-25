@@ -30,7 +30,7 @@ esc_1.freq(50)
 esc_2.freq(50)
 esc_3.freq(50)
 esc_4.freq(50)
-
+ 
 # deletes current file
 # if os.path.exists('/angleData.txt'):
 #try commenting out os.remove
@@ -44,7 +44,7 @@ rcvdFile = open('rcvd.txt','r')
 period_ms = 20
 max_throttle = int ((2/ period_ms) * 65535)
 min_throttle = int ((1/ period_ms) * 65535)
-goal_throttle = int ((1.35/ period_ms) * 65535)
+goal_throttle = int ((1.1/ period_ms) * 65535)
 # offset for each motor
 t1_ofs_throttle = int ((0.035/ period_ms) * 65535)
 t2_ofs_throttle = int ((0.0/ period_ms) * 65535)
@@ -53,7 +53,7 @@ t4_ofs_throttle = int ((0.01/ period_ms) * 65535)
 steps = 100  # Define the number of steps
 duty_step = (goal_throttle - min_throttle) // steps
 
-maxThrottleDuration = 4 * 1000 # in ms
+maxThrottleDuration = 60 * 1000 # in ms
 hasTilted = False
 
 on = True # from user input. Starts the drone
@@ -67,12 +67,12 @@ cmd_duty_step = 0
 prev_goal = goal_throttle
 
 # PID Controller values
-pid_pitch_kp:float = 8.5#5.5
+pid_pitch_kp:float = 7.5#5.5,8.5
 pid_pitch_ki:float = 0#.4
-pid_pitch_kd:float = 0.8
-pid_roll_kp:float = 8.5#1.0
+pid_pitch_kd:float = 0.8#0.8
+pid_roll_kp:float = 8.5#1.0.,8.5
 pid_roll_ki:float = 0#.4
-pid_roll_kd:float = 0.8
+pid_roll_kd:float = 0.85#0.8
 pid_yaw_kp:float = 0#1.0
 pid_yaw_ki:float = 0#.1
 pid_yaw_kd:float = 0#.5
@@ -168,6 +168,8 @@ try:
         # Checks for any rf message
         if rf.existsMessage():
             # newest_throttle: similar to 1.1. newest_goal: after calculation like 4320
+            print("recieved")
+            # rf.updateMessage()
             newest_throttle = float(rf.getMessage()) # gets the message
             if newest_throttle>=1 and newest_throttle<=2 and newest_throttle != prev_goal: #if between the allowed throttle range
                 if newest_throttle== 1.0:
@@ -185,33 +187,6 @@ try:
                         cmd_duty_step = cycle_diff//steps
                     prev_goal = newest_throttle
                     
-#         Can I delete this?            
-#         lines = rcvdFile.readlines()  
-#         if lines:
-#             last_file_line = float(lines[-1].strip())  # e.g. "1.3"
-#             newest_goal = int ((last_file_line/ period_ms) * 65535)
-#             print(newest_goal)
-            
-#                # If there's a difference from the previous value, we set changeDutyCycle = True
-#             if prev_goal is None or newest_goal != prev_goal:
-#                 changeDutyCycle = True
-#                 prev_goal = newest_goal  # store this line as the new "previous"
-#             else:
-#                 # If it's the same line, do nothing special
-#                 pass
-#         else:
-#             # If the file was empty, we won't change anything
-#             newest_goal = goal_throttle
-# 
-#         # Only do something if changeDutyCycle is True
-#         if changeDutyCycle:
-#             # Convert newest_goal to an integer throttle
-#             cmd_throttle = int(newest_goal)
-#             cmd_duty_step = (cmd_throttle - duty_cycle) // steps
-#         else:
-#             # No change from the previous line
-#             cmd_throttle = 0
-#             cmd_duty_step = 0
         
         if takeOff: #while taking off
 
@@ -281,24 +256,24 @@ try:
         roll_last_integral = roll_i
         pitch_last_integral = pitch_i
         yaw_last_integral = yaw_i
-        
-        # For debgugging
-        #mpu.readData()
+         
+         # For debgugging
+         #mpu.readData()
         mpu.updateAngle()
-        # print(str(duty_cycle))
+         # print(str(duty_cycle))
         #print(str(mpu.getAngle()))
         print(count, [t1,t2,t3,t4], cmd_duty_step, duty_cycle)
-#         print(takeOff, changeDutyCycle)
-        # write to file - angle then throttle for each motor
+# #         print(takeOff, changeDutyCycle)
+         # write to file - angle then throttle for each motor
         angleFile.write(f"{angle[0]}, {angle[1]}, {angle[2]}, {current_time}\n")
         throttleFile.write(f"{t1}, {t2}, {t3}, {t4}, {pitch_d}, {roll_d}\n")
-        
+         
         if(mpu.checkRotationAngle()): 
-            stopAll() 
-            hasTilted = True
-            led.toggle()
-            break
-        
+             stopAll() 
+             hasTilted = True
+             led.toggle()
+             break
+         
         sleep(0.005)
         
     stopAll()      
@@ -306,10 +281,12 @@ try:
     print('Finished')
     angleFile.close()
     throttleFile.close()
-    
+     
 except KeyboardInterrupt:
     print("Keyboard interrupt")
     esc.duty_u16(0) # didn't fix it yet
     print(esc)
     esc.deinit()
 
+
+ 
