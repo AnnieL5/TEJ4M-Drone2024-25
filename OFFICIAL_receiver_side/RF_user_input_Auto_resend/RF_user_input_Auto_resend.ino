@@ -19,7 +19,7 @@ char dataToSend [length]; //one of the characters needs to be null character to 
 bool rslt = false;
 
 void setup() {
-    Serial.begin(9600);
+    Serial.begin(115200);
 
     Serial.println("Arduino TX Starting");
 

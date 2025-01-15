@@ -14,11 +14,15 @@ pitch = 0
 roll = 0
 yall = 0
 
+pitchT = 0
+rollT = 0
+yawT = 0
+
 max_angle = 15
 
 throttle_increment = 0.01
 
-arduino = serial.Serial('COM3', 115200)  # Replace 'COM3' with your Arduino's port
+arduino = serial.Serial('COM4', 115200)  # Replace 'COM3' with your Arduino's port
 
 def mapFromTo(x,a,b,c,d):
    y=(x-a)/(b-a)*(d-c)+c
@@ -37,6 +41,7 @@ joystick = joysticks[0]
 while keepPlaying:
     clock.tick(10)
     
+    # print(arduino.readline())
     message = ""
 
     for event in pygame.event.get():

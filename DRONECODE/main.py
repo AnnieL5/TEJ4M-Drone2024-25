@@ -4,13 +4,12 @@ from MPU_data import MPU6050DATA
 from RFClass import RFClass
 import os
 
-# From 1/1/2025 - 1/12/2025
+# From 1/1/2025
 # - with a while loop
 # - detects angle instead of angular speed
 # - with PID
 # - DOWNLOAD THE FILE BEFORE UNPLUGGING THE BATTERY
-# - add in RF message to adjust throttle - 4 char message i.e. 1.23
-
+# - add in RF message to adjust throttle
 # Future: add error value. To be controller - gyro data
 # 		  add pid for yaw & kd
 # LED indication:
@@ -68,12 +67,12 @@ cmd_duty_step = 0
 prev_goal = goal_throttle
 
 # PID Controller values
-pid_pitch_kp:float = 5#5.5
+pid_pitch_kp:float = 8.5#5.5
 pid_pitch_ki:float = 0#.4
-pid_pitch_kd:float = 0#.5
-pid_roll_kp:float = 2#1.0
+pid_pitch_kd:float = 0.8
+pid_roll_kp:float = 8.5#1.0
 pid_roll_ki:float = 0#.4
-pid_roll_kd:float = 0#.5
+pid_roll_kd:float = 0.8
 pid_yaw_kp:float = 0#1.0
 pid_yaw_ki:float = 0#.1
 pid_yaw_kd:float = 0#.5
@@ -135,14 +134,14 @@ try:
         pitch_i:float = pitch_last_integral + (angle[0] * pid_pitch_ki * loop_time)
         pitch_i = max(min(pitch_i, i_limit), -i_limit) # constrain within I-term limits
         pitch_d:float = pid_pitch_kd * (angle[0] - pitch_last_error) / loop_time
-        pid_pitch = pitch_p + pitch_i - pitch_d #in original tutorial is p+i+d
+        pid_pitch = pitch_p + pitch_i + pitch_d #in original tutorial is p+i+d
         
         # roll PID calc
         roll_p:float = angle[1] * pid_roll_kp
         roll_i:float = roll_last_integral + (angle[1] * pid_roll_ki * loop_time)
         roll_i = max(min(roll_i, i_limit), -i_limit) # constrain within I-term limits
         roll_d:float = pid_roll_kd * (angle[1] - roll_last_error) / loop_time
-        pid_roll:float = roll_p + roll_i - roll_d
+        pid_roll:float = roll_p + roll_i + roll_d
 
         # Yaw PID Calculation
         yaw_p = angle[2] * pid_yaw_kp
@@ -292,7 +291,7 @@ try:
 #         print(takeOff, changeDutyCycle)
         # write to file - angle then throttle for each motor
         angleFile.write(f"{angle[0]}, {angle[1]}, {angle[2]}, {current_time}\n")
-        throttleFile.write(f"{t1}, {t2}, {t3}, {t4}\n")
+        throttleFile.write(f"{t1}, {t2}, {t3}, {t4}, {pitch_d}, {roll_d}\n")
         
         if(mpu.checkRotationAngle()): 
             stopAll() 
@@ -313,5 +312,4 @@ except KeyboardInterrupt:
     esc.duty_u16(0) # didn't fix it yet
     print(esc)
     esc.deinit()
-
 
