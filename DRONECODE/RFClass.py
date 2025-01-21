@@ -7,7 +7,7 @@ class RFClass:
     #addresses
     pipes = (b'\xe1\xf0\xf0\xf0\xf0', b'\xd2\xf0\xf0\xf0\xf0')
     
-    msgLength = 4 #one less
+    msgLength = 9 #one less
 
     #setting up nrf24l01 object
     spi = SPI(0, sck=Pin(6), mosi=Pin(7), miso=Pin(4))
@@ -16,7 +16,7 @@ class RFClass:
     ce = Pin(17, mode=Pin.OUT, value=0)
     nrf = NRF24L01(spi, csn, ce, channel=100, payload_size=(32))
     
-    message = "1.00" # Default
+    message = "000000000" # Default
     
     def __init__(self):
 
@@ -38,28 +38,58 @@ class RFClass:
 
     def existsMessage(self) -> bool:
         #checking for a message on the nrf24l01
-        if self.nrf.any(): #and self.nrf.recv().decode('utf-8') != ""
+        if self.nrf.any():
             return True
         else:
             return False
         
-    def getMessage(self):
+    def updateMessage(self) -> None:
         print('Received something:')
         package = self.nrf.recv()
         #package_2 = r'package[0:9]'
         print(package)
-        try: 
-            if package.strip(b'\x00'):  # Remove padding bytes and check if anything is left
-                msg = package.decode('utf-8')
-                print(f"Decoded message: {msg}")
-                return msg
-            else:
-                print("Received empty or padding data.")
-        except UnicodeError or ValueError or TypeError:
-            print("Decoding failed")
-#         msg=package.decode('utf-8')[0:self.msgLength] #type string
-#         print(msg)
+        self.message = package.decode('utf-8')[0:self.msgLength] #type string
         #Python doesn't neqed the null terminator but to 32 ensures we don't accidentally truncate any data that was meant to be sent. 
 
         
-        
+    def getMessage(self) -> str:
+        return self.message
+    
+    def getState(self) -> bool:
+        return bool(self.message[0])
+    
+    def getPitch(self) -> int:
+        return int(self.message[1:3])
+    
+    def getRoll(self) -> int:
+        return int(self.message[3:5])
+    
+    def getYaw(self) -> int:
+        return int(self.message[5:7])
+    
+    def getThrottle(self) -> int:
+        return int(self.message[7:9])
+        #print(f.read())
+#         if msg.strip() == "":
+#             print("Empty Message")
+#         else:
+#             print(msg)
+
+
+# rf = RFClass()
+# 
+# while True:
+#     utime.sleep(1)
+#     
+#     if rf.existsMessage():
+#         msg = rf.getMessage()
+#     # open file in append mode and write the received message
+#         if(msg[0]== "c"):
+#             print('here')
+#             break
+#         else:
+#             with open('rcvd.txt', 'a') as f: #automatically closes file after writing 
+#                 f.write(msg[0:4] + '\n')
+#             print('Here2')
+#     
+# print('finish')  
