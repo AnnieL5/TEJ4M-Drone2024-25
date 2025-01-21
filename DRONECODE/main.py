@@ -152,14 +152,14 @@ try:
         pitch_i:float = pitch_last_integral + (angle[0] * pid_pitch_ki * loop_time)
         pitch_i = max(min(pitch_i, i_limit), -i_limit) # constrain within I-term limits
         pitch_d:float = pid_pitch_kd * (angle[0] - pitch_last_error) / loop_time
-        pid_pitch = pitch_p + pitch_i - pitch_d #in original tutorial is p+i+d
+        pid_pitch = pitch_p + pitch_i + pitch_d #in original tutorial is p+i+d
         
         # roll PID calc
         roll_p:float = angle[1] * pid_roll_kp
         roll_i:float = roll_last_integral + (angle[1] * pid_roll_ki * loop_time)
         roll_i = max(min(roll_i, i_limit), -i_limit) # constrain within I-term limits
         roll_d:float = pid_roll_kd * (angle[1] - roll_last_error) / loop_time
-        pid_roll:float = roll_p + roll_i - roll_d
+        pid_roll:float = roll_p + roll_i + roll_d
 
         # Yaw PID Calculation
         yaw_p = angle[2] * pid_yaw_kp
@@ -183,35 +183,7 @@ try:
         
         t1,t2,t3,t4 = constrainThrottle(t1,t2,t3,t4)
         
-                    
-#         Can I delete this?            
-#         lines = rcvdFile.readlines()  
-#         if lines:
-#             last_file_line = float(lines[-1].strip())  # e.g. "1.3"
-#             newest_goal = int ((last_file_line/ period_ms) * 65535)
-#             print(newest_goal)
-            
-#                # If there's a difference from the previous value, we set changeDutyCycle = True
-#             if prev_goal is None or newest_goal != prev_goal:
-#                 changeDutyCycle = True
-#                 prev_goal = newest_goal  # store this line as the new "previous"
-#             else:
-#                 # If it's the same line, do nothing special
-#                 pass
-#         else:
-#             # If the file was empty, we won't change anything
-#             newest_goal = goal_throttle
-# 
-#         # Only do something if changeDutyCycle is True
-#         if changeDutyCycle:
-#             # Convert newest_goal to an integer throttle
-#             cmd_throttle = int(newest_goal)
-#             cmd_duty_step = (cmd_throttle - duty_cycle) // steps
-#         else:
-#             # No change from the previous line
-#             cmd_throttle = 0
-#             cmd_duty_step = 0
-        
+       
         if takeOff: #while taking off
 
             # set motors to duty cyle - first time at min throttle
