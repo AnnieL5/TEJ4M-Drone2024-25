@@ -13,9 +13,9 @@ esc_4.freq(50)
 def set_throttle(pulse_width_ms):
     period_ms = 20  # 1 / 50 Hz = 20 ms
     duty_cycle = int((pulse_width_ms / period_ms) * 65535)
-#     esc_1.duty_u16(duty_cycle)
-#     esc_2.duty_u16(duty_cycle)
-#     esc_3.duty_u16(duty_cycle)
+    esc_1.duty_u16(duty_cycle)
+    esc_2.duty_u16(duty_cycle)
+    esc_3.duty_u16(duty_cycle)
     esc_4.duty_u16(duty_cycle)
 #     
 #max throttle 

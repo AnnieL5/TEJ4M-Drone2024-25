@@ -53,7 +53,7 @@ t4_ofs_throttle = int ((0.01/ period_ms) * 65535)
 steps = 100  # Define the number of steps
 duty_step = (goal_throttle - min_throttle) // steps
 
-maxThrottleDuration = 60 * 1000 # in ms
+maxThrottleDuration = 30 * 1000 # in ms
 hasTilted = False
 
 on = True # from user input. Starts the drone
@@ -170,22 +170,24 @@ try:
             # newest_throttle: similar to 1.1. newest_goal: after calculation like 4320
             print("recieved")
             # rf.updateMessage()
-            newest_throttle = float(rf.getMessage()) # gets the message
-            if newest_throttle>=1 and newest_throttle<=2 and newest_throttle != prev_goal: #if between the allowed throttle range
-                if newest_throttle== 1.0:
-                    landing = True # change to landing if received a message stating 1.00
-                else:
-                    count += 1 # for debug
-                    changeDutyCycle = True
-                    newest_goal = int ((newest_throttle/ period_ms) * 65535) # find the goal throttle
-                    cycle_diff = (newest_goal - duty_cycle) 
-                    if abs(cycle_diff) < 5:
-                        changeDutyCycle = False # such a minor change
-                    elif abs(cycle_diff/steps)<1:
-                        cmd_duty_step = 1 if (cycle_diff) > 0 else -1 # the smallest step is 1 or -1
+            msg = rf.getMessage()
+            if msg != None:
+                newest_throttle = float(msg) # gets the message
+                if newest_throttle>=1 and newest_throttle<=2 and newest_throttle != prev_goal: #if between the allowed throttle range
+                    if newest_throttle== 1.0:
+                        landing = True # change to landing if received a message stating 1.00
                     else:
-                        cmd_duty_step = cycle_diff//steps
-                    prev_goal = newest_throttle
+                        count += 1 # for debug
+                        changeDutyCycle = True
+                        newest_goal = int ((newest_throttle/ period_ms) * 65535) # find the goal throttle
+                        cycle_diff = (newest_goal - duty_cycle) 
+                        if abs(cycle_diff) < 5:
+                            changeDutyCycle = False # such a minor change
+                        elif abs(cycle_diff/steps)<1:
+                            cmd_duty_step = 1 if (cycle_diff) > 0 else -1 # the smallest step is 1 or -1
+                        else:
+                            cmd_duty_step = cycle_diff//steps
+                        prev_goal = newest_throttle
                     
         
         if takeOff: #while taking off
@@ -284,7 +286,7 @@ try:
      
 except KeyboardInterrupt:
     print("Keyboard interrupt")
-    esc.duty_u16(0) # didn't fix it yet
+    stopAll() # didn't fix it yet
     print(esc)
     esc.deinit()
 

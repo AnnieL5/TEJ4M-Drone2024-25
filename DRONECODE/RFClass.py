@@ -38,18 +38,28 @@ class RFClass:
 
     def existsMessage(self) -> bool:
         #checking for a message on the nrf24l01
-        if self.nrf.any():
+        if self.nrf.any(): #and self.nrf.recv().decode('utf-8') != ""
             return True
         else:
             return False
         
-    def getMessage(self) -> str:
+    def getMessage(self):
         print('Received something:')
         package = self.nrf.recv()
         #package_2 = r'package[0:9]'
         print(package)
-        msg=package.decode('utf-8')[0:self.msgLength] #type string
+        try: 
+            if package.strip(b'\x00'):  # Remove padding bytes and check if anything is left
+                msg = package.decode('utf-8')
+                print(f"Decoded message: {msg}")
+                return msg
+            else:
+                print("Received empty or padding data.")
+        except UnicodeError or ValueError or TypeError:
+            print("Decoding failed")
+#         msg=package.decode('utf-8')[0:self.msgLength] #type string
+#         print(msg)
         #Python doesn't neqed the null terminator but to 32 ensures we don't accidentally truncate any data that was meant to be sent. 
 
-        return msg        
+        
         

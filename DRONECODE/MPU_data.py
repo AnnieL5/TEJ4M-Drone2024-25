@@ -15,7 +15,7 @@ class MPU6050DATA():
     pastTime = 0
     
     maxSpeed = 20
-    maxAngle = 20
+    maxAngle = 40#previous 25 
     
     def __init__(self, id, sda, scl):
         # Set up the I2C interfac
@@ -60,11 +60,11 @@ class MPU6050DATA():
         return self.gyroAngle
     
     def calibrateGyro(self):
-        for i in range(100):
+        for i in range(1000):
             data = list(self.mpu.read_gyro_data())
             self.gyroOFS = [self.gyroOFS[j] + data[j] for j in range(3)]
             
-        self.gyroOFS = [self.gyroOFS[i] / 100.0 for i in range(3)]
+        self.gyroOFS = [self.gyroOFS[i] / 1000.0 for i in range(3)]
         # print(str(self.gyroOFS))
         
         self.gyroAngle = [0,0,0]
