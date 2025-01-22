@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+# Filed designed to analyze the data from the drone
+# Save the data from the drone to a file IN THIS FOLDER
+
 angleX = []
 angleY = []
 angleZ = []
@@ -14,7 +17,7 @@ t4 = []
 axis = []
 
 vs = 10 #vertical stretch
-vt = 4200
+vt = 4200 #vertical translation
 
 vs=1
 vt=0
@@ -56,13 +59,13 @@ td = np.array(t4)
 
 # figure, axis = plt.subplots(2, 1)
 
-
+# Plot angles
 plt.plot(xpoints, aX, color='r', label='pitch')
 plt.plot(xpoints, aY, color='b', label='row')
 plt.plot(xpoints, aZ, color='k', label='yall')
 plt.plot(xpoints, axis, color='g', label='axis')
 
-
+# Plot throttle
 # plt.plot(xpoints, ta, color='g', label='t1')
 # plt.plot(xpoints, tb, color='c', label='t2')
 # plt.plot(xpoints, tc, color='m', label='t3')#purple

@@ -11,6 +11,7 @@ class RFClass:
 
     #setting up nrf24l01 object
     spi = SPI(0, sck=Pin(6), mosi=Pin(7), miso=Pin(4))
+
     #Keep csn & ce pins the same - do not change
     csn = Pin(14, mode=Pin.OUT, value=1)
     ce = Pin(17, mode=Pin.OUT, value=0)
@@ -31,14 +32,11 @@ class RFClass:
         self.nrf.open_rx_pipe(1, self.pipes[0])
         self.nrf.start_listening()
 
-        # os.remove('rcvd.txt')
-        # f = open('rcvd.txt', 'a')
-
         print('RX Ready. Waiting for packets...')
 
     def existsMessage(self) -> bool:
         #checking for a message on the nrf24l01
-        if self.nrf.any(): #and self.nrf.recv().decode('utf-8') != ""
+        if self.nrf.any():
             return True
         else:
             return False
@@ -46,7 +44,6 @@ class RFClass:
     def getMessage(self):
         print('Received something:')
         package = self.nrf.recv()
-        #package_2 = r'package[0:9]'
         print(package)
         try: 
             if package.strip(b'\x00'):  # Remove padding bytes and check if anything is left
@@ -55,11 +52,5 @@ class RFClass:
                 return msg
             else:
                 print("Received empty or padding data.")
-        except UnicodeError or ValueError or TypeError:
+        except (UnicodeError, ValueError, TypeError):
             print("Decoding failed")
-#         msg=package.decode('utf-8')[0:self.msgLength] #type string
-#         print(msg)
-        #Python doesn't neqed the null terminator but to 32 ensures we don't accidentally truncate any data that was meant to be sent. 
-
-        
-        

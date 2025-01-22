@@ -23,11 +23,13 @@ void setup() {
 
     Serial.println("Arduino TX Starting");
 
+    // Wait until the radio is ready
     if (!radio.begin()) {
       Serial.println("Radio not initialized!");
       while (!radio.begin()) {}
     }
 
+    // Set default configuration
     radio.setDataRate( RF24_250KBPS );
     radio.openWritingPipe(pipes[0]);
     radio.openReadingPipe(1,pipes[1]);
@@ -40,10 +42,12 @@ void setup() {
 }
 
 void loop() {
+  // Wait until the Serial is available
   while (Serial.available() == 0) { 
   }
 
   String userInput = Serial.readString();
+
   //Count the length of string + null character (if we were to convert to char)
   int str_len = userInput.length() + 1; 
 
@@ -53,6 +57,7 @@ void loop() {
 	  //sending message
     rslt = radio.write(&dataToSend, sizeof(dataToSend));
 
+    // if failed to send the message
     while(!rslt){
       Serial.print("Data Sent - ");
       Serial.print(userInput);

@@ -4,7 +4,7 @@ from MPU_data import MPU6050DATA
 from RFClass import RFClass
 import os
 
-# From 1/1/2025
+# From 1/1/2025 to 1/12/2025
 # - with a while loop
 # - detects angle instead of angular speed
 # - with PID
@@ -16,11 +16,12 @@ import os
 # - end with on: toggled checkRotation()
 # - end with off: finished the entire loop
 
+# Initial Objects
 led = Pin(25, Pin.OUT)
-
 mpu = MPU6050DATA(id=0, sda=12, scl=13)
 rf = RFClass()
 
+# Define ESCs
 esc_1 = PWM(Pin(15)) # Top Left - weaker one - changed to pin 15, originally pin 14 
 esc_2 = PWM(Pin(2)) # bottom left - ccw
 esc_3 = PWM(Pin(28)) # Bottom right
@@ -32,8 +33,6 @@ esc_3.freq(50)
 esc_4.freq(50)
  
 # deletes current file
-# if os.path.exists('/angleData.txt'):
-#try commenting out os.remove
 os.remove('/angleData.txt')
 os.remove('/throttleData.txt')
 # Open file to log data
@@ -41,6 +40,9 @@ angleFile = open('angleData.txt', 'w') # mode(r, a, w, x, t,b)
 throttleFile = open('throttleData.txt', 'w')
 rcvdFile = open('rcvd.txt','r')
         
+# Init variables
+
+# Define the throttle values
 period_ms = 20
 max_throttle = int ((2/ period_ms) * 65535)
 min_throttle = int ((1/ period_ms) * 65535)
@@ -88,6 +90,7 @@ yaw_last_error:float = 0.0
 
 transition_throttle = int ((1.1/ period_ms) * 65535) # when it switch from motor set duty_cycle to adding pid values
 
+# Methods
 def stopAll() -> None:
     esc_1.duty_u16(min_throttle)
     esc_2.duty_u16(min_throttle)
@@ -95,15 +98,15 @@ def stopAll() -> None:
     esc_4.duty_u16(min_throttle)
     
 def constrainThrottle(t1, t2, t3, t4): # constrain throttle to between min to max throttle
-    t1 = max(min(t1, max_throttle), min_throttle) # constrain within throttle limits
-    t2 = max(min(t2, max_throttle), min_throttle) # constrain within throttle limits
-    t3 = max(min(t3, max_throttle), min_throttle) # constrain within throttle limits
-    t4 = max(min(t4, max_throttle), min_throttle) # constrain within throttle limits
+    t1 = max(min(t1, max_throttle), min_throttle)
+    t2 = max(min(t2, max_throttle), min_throttle) 
+    t3 = max(min(t3, max_throttle), min_throttle) 
+    t4 = max(min(t4, max_throttle), min_throttle) 
     return t1,t2,t3,t4
 
 try:
 
-    led.value(1)
+    led.value(1) #Turn on LED
 
     # set all motors to min throttle
     esc_1.duty_u16(min_throttle)
@@ -111,7 +114,7 @@ try:
     esc_3.duty_u16(min_throttle)
     esc_4.duty_u16(min_throttle)
     
-    sleep (10)
+    sleep (10) # wait for the ESCs to calibrate
     
     mpu.calibrateGyro()
     
@@ -158,22 +161,17 @@ try:
         t3 = t3_ofs_throttle + int(duty_cycle + pid_pitch + pid_roll + pid_yaw)  # Motor 3
         t4 = t4_ofs_throttle + int(duty_cycle - pid_pitch + pid_roll - pid_yaw)  # Motor 4
 
-        # t1:int = int(duty_cycle - pid_pitch - pid_roll) # - pid_yaw_kp*angle[2]
-        # t2:int = int(duty_cycle + pid_pitch - pid_roll) # + pid_yaw_kp*angle[2] 
-        # t3:int = int(duty_cycle + pid_pitch + pid_roll) # - pid_yaw_kp*angle[2] 
-        # t4:int = int(duty_cycle - pid_pitch + pid_roll) # + pid_yaw_kp*angle[2]
-        
         t1,t2,t3,t4 = constrainThrottle(t1,t2,t3,t4)
         
         # Checks for any rf message
         if rf.existsMessage():
             # newest_throttle: similar to 1.1. newest_goal: after calculation like 4320
             print("recieved")
-            # rf.updateMessage()
             msg = rf.getMessage()
             if msg != None:
                 newest_throttle = float(msg) # gets the message
-                if newest_throttle>=1 and newest_throttle<=2 and newest_throttle != prev_goal: #if between the allowed throttle range
+                #if between the allowed throttle range
+                if newest_throttle>=1 and newest_throttle<=2 and newest_throttle != prev_goal:
                     if newest_throttle== 1.0:
                         landing = True # change to landing if received a message stating 1.00
                     else:
@@ -190,7 +188,8 @@ try:
                         prev_goal = newest_throttle
                     
         
-        if takeOff: #while taking off
+        #while taking off
+        if takeOff:
 
             # set motors to duty cyle - first time at min throttle
             if duty_cycle > transition_throttle: # to prevent having a throttle < min throttle and having a large angle error that might affect take off
@@ -259,13 +258,14 @@ try:
         pitch_last_integral = pitch_i
         yaw_last_integral = yaw_i
          
-         # For debgugging
-         #mpu.readData()
         mpu.updateAngle()
-         # print(str(duty_cycle))
+
+        # For debgugging
+        #mpu.readData()
+        # print(str(duty_cycle))
         #print(str(mpu.getAngle()))
         print(count, [t1,t2,t3,t4], cmd_duty_step, duty_cycle)
-# #         print(takeOff, changeDutyCycle)
+# #     print(takeOff, changeDutyCycle)
          # write to file - angle then throttle for each motor
         angleFile.write(f"{angle[0]}, {angle[1]}, {angle[2]}, {current_time}\n")
         throttleFile.write(f"{t1}, {t2}, {t3}, {t4}, {pitch_d}, {roll_d}\n")
