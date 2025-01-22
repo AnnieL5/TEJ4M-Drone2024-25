@@ -1,4 +1,8 @@
-lst = [1,2,3]
-tup = (1,2,3)
+str = '111'
+def test():
+    print(str[5])
+try:
+    test()
+except (ValueError, IndexError):
+    print('ValueError')
 
-print(tup - lst)

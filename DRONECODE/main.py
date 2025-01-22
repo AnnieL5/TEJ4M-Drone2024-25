@@ -46,7 +46,8 @@ rcvdFile = open('rcvd.txt','r')
 period_ms = 20
 max_throttle = int ((2/ period_ms) * 65535)
 min_throttle = int ((1/ period_ms) * 65535)
-goal_throttle = int ((1.35/ period_ms) * 65535)
+init_throttle = 1.35
+goal_throttle = int ((init_throttle/ period_ms) * 65535)
 # offset for each motor
 t1_ofs_throttle = int ((0.035/ period_ms) * 65535)
 t2_ofs_throttle = int ((0.0/ period_ms) * 65535)
@@ -59,7 +60,7 @@ maxThrottleDuration = 4 * 1000 # in ms
 hasTilted = False
 
 on = True # from user input. Starts the drone
-takeOff = True #phase
+takeOff = False #phase
 landing = False
 duty_cycle = min_throttle # starts with min throttle
 endHoverTime = 0 # assigns value after takeoff
@@ -122,10 +123,11 @@ try:
     count = 0 # to count how many message received. For debugging
     
     while not takeOff: # wait for take off signal
+        print("waiting")
         if rf.existsMessage():
-            rf.updateMessage()
-            takeOff = rf.getState()
-            print("Taking off")
+            if rf.updateMessage() != None:
+                takeOff = rf.getState()
+                print("Taking off")
     
     while True:
         
@@ -134,12 +136,12 @@ try:
         # Checks for any rf message
         if rf.existsMessage():
             # newest_throttle: similar to 1.1. newest_goal: after calculation like 4320
-            rf.updateMessage()
-            if rf.getState == 0: # land
-                takeOff = False
-                landing = True
-            else:
-                duty_cycle = 1 + rf.getThrottle() / 100 # Calculate new duty_cycle from 1.00 to 2.00
+            if rf.updateMessage() != None:
+                if rf.getState == 0: # land
+                    takeOff = False
+                    landing = True
+                else:
+                    duty_cycle = int (((init_throttle + rf.getThrottle() / 100)/ period_ms) * 65535) # Calculate new duty_cycle from 1.00 to 2.00
         
         angle = [(rf.getPitch(), rf.getRoll(), rf.getYaw())[i] - mpu.getAngle()[i] for i in range(3)] # get difference between controller's goal and current angle
                 
@@ -280,8 +282,11 @@ try:
     
 except KeyboardInterrupt:
     print("Keyboard interrupt")
-    esc.duty_u16(0) # didn't fix it yet
-    print(esc)
-    esc.deinit()
+    stopAll()
+    # print(esc)
+    esc_1.deinit()
+    esc_1.deinit()
+    esc_1.deinit()
+    esc_1.deinit()
 
 
