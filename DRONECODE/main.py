@@ -123,7 +123,7 @@ try:
     count = 0 # to count how many message received. For debugging
     
     while not takeOff: # wait for take off signal
-        print("waiting")
+        print("waiting..")
         if rf.existsMessage():
             if rf.updateMessage() != None:
                 takeOff = rf.getState()
