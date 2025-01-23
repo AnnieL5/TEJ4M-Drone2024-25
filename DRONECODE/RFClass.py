@@ -7,7 +7,7 @@ class RFClass:
     #addresses
     pipes = (b'\xe1\xf0\xf0\xf0\xf0', b'\xd2\xf0\xf0\xf0\xf0')
     
-    msgLength = 9 #one less
+    msgLength = 23 #one less
 
     #setting up nrf24l01 object
     spi = SPI(0, sck=Pin(6), mosi=Pin(7), miso=Pin(4))
@@ -16,14 +16,14 @@ class RFClass:
     ce = Pin(17, mode=Pin.OUT, value=0)
     nrf = NRF24L01(spi, csn, ce, channel=100, payload_size=(32))
     
-    msg = "000000000" # Default
-    past_msg = "000000000" # Default
+    msg = "0000000000000" # Default
+#     past_msg = "0000000000000" # Default
     
     state = False
-    pitch = 00
-    roll = 00
-    yaw = 00
-    throttle = 00
+    pitch = 0
+    roll = 0
+    yaw = 0
+    throttle = 0
     
     def __init__(self):
 
@@ -58,14 +58,13 @@ class RFClass:
         try: 
             if package.strip(b'\x00'):  # Remove padding bytes and check if anything is left
                 msg = package.decode('utf-8')[0:self.msgLength]
-                print(len(msg))
                 try:
                     self.assignValues(msg)
                     self.msg = msg
                     # self.past_msg = msg
                     print(f"Decoded message: {self.msg}")
                     return msg
-                except ValueError:
+                except (UnicodeError, ValueError, TypeError):
                     print("Decoded. Assigning Filed")
                     self.assignValues(self.msg)
                     # self.assignValues(self.past_msg)
@@ -75,11 +74,14 @@ class RFClass:
             print("Decoding failed")
         #Python doesn't neqed the null terminator but to 32 ensures we don't accidentally truncate any data that was meant to be sent. 
     def assignValues(self, msg: str):
-        self.state = bool(msg[0])
-        self.pitch = int(msg[1:3])
-        self.roll = int(msg[3:5])
-        self.yaw = int(msg[5:7])
-        self.throttle = int(msg[7:9])
+        var = msg.split(', ')
+        # state, pritch, roll, yaw, throttle, * = msg.split(', ')
+        
+        self.state = bool(var[0])
+        self.pitch = int(var[1])
+        self.roll = int(var[2])
+        self.yaw = int(var[3])
+        self.throttle = int(var[4])
 
     def getMessage(self) -> str:
         return self.msg
@@ -98,19 +100,20 @@ class RFClass:
 
     def getThrottle(self) -> int:
         return self.throttle 
-        
-
+#         
+# 
 rf = RFClass()
 
 while True:
-    utime.sleep(1)
+    utime.sleep(0.1)
 
     if rf.existsMessage():
         msg = rf.updateMessage()
-        print(msg)
-        for char in msg:
-            print(f"digit: {char}")
-        print(int(msg[3]))
+        print(rf.getMessage())
+        print(f'on: {rf.getState()}, pitch: {rf.getPitch()}, roll: {rf.getRoll()}, yaw: {rf.getYaw()}, throttle: {rf.getThrottle()}')
+#         for char in msg:
+#             print(f"digit: {char}")
+#         print(int(msg[3]))
 #     # open file in append mode and write the received message
 #         if(msg[0]== "c"):
 #             print('here')

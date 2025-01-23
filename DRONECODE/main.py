@@ -125,6 +125,7 @@ try:
     while not takeOff: # wait for take off signal
         print("waiting..")
         if rf.existsMessage():
+            print("message")
             if rf.updateMessage() != None:
                 takeOff = rf.getState()
                 print("Taking off")

@@ -1,5 +1,6 @@
 import pygame
 import serial
+from time import sleep
 
 pygame.init()
 joysticks = []
@@ -22,7 +23,7 @@ max_angle = 15
 
 throttle_increment = 0.01
 
-arduino = serial.Serial('COM4', 115200)  # Replace 'COM3' with your Arduino's port
+arduino = serial.Serial('/dev/ttyACM1', 115200)  # Replace 'COM3' with your Arduino's port
 
 def mapFromTo(x,a,b,c,d):
    y=(x-a)/(b-a)*(d-c)+c
@@ -39,7 +40,7 @@ for i in range(0, pygame.joystick.get_count()):
 joystick = joysticks[0]
 
 while keepPlaying:
-    clock.tick(10)
+    clock.tick(1)
     
     # print(arduino.readline())
     message = ""
@@ -74,10 +75,13 @@ while keepPlaying:
         
             # print(f'{pitch}, {roll}, {yaw}')
             # print(f'{t1}, {t2}, {t3}, {t4}')
-    message = f'{on}, {pitchT:.0f}, {rollT:.0f}, {yawT:.0f}, {duty_cycle_increment*100:.0f}' 
+            
+    message = f'{on}, {pitchT:.0f}, {rollT:.0f}, {yawT:.0f}, {duty_cycle_increment*100:.0f}, ' 
+#    print(duty_cycle_increment, f'{duty_cycle_increment*100:.0f}')
     print(message)
     
     arduino.write(message.encode())
+    sleep(0.5)
 
 
     # for event in pygame.event.get():
@@ -92,3 +96,4 @@ while keepPlaying:
     #             value = joystick.get_button(i)
     #             if value != 0:
     #                 print(f"Button {i}: {joystick.get_button(i)}")
+
