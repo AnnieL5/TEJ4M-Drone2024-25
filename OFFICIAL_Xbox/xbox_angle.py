@@ -21,9 +21,9 @@ yawT = 0
 
 max_angle = 15
 
-throttle_increment = 0.01
+throttle_increment = 0.05
 
-arduino = serial.Serial('/dev/ttyACM1', 115200)  # Replace 'COM3' with your Arduino's port
+arduino = serial.Serial('COM4 ', 115200)  # Replace 'COM3' with your Arduino's port
 
 def mapFromTo(x,a,b,c,d):
    y=(x-a)/(b-a)*(d-c)+c
@@ -63,10 +63,11 @@ while keepPlaying:
             # print(str(on)+str(current_duty_cycle))
         
         elif event.type == pygame.JOYAXISMOTION:
-            pitch = joystick.get_axis(1) # Forward positive
-            roll = joystick.get_axis(0) # Left positive
-            yaw = - joystick.get_axis(2)# Left positive
+            pitch = -joystick.get_axis(1) # Forward positive
+            roll = -joystick.get_axis(0) # Left positive
+            yaw = joystick.get_axis(2)*3# Left positive
 
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
             pitchT = mapFromTo(pitch, -1, 1, -max_angle, max_angle)
             rollT = mapFromTo(roll, -1, 1, -max_angle, max_angle)
             yawT = mapFromTo(yaw, -1, 1, -max_angle, max_angle)
@@ -81,6 +82,8 @@ while keepPlaying:
     print(message)
     
     arduino.write(message.encode())
+    print(arduino.readline())
+    
     sleep(0.5)
 
 

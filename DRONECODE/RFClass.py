@@ -17,7 +17,7 @@ class RFClass:
     nrf = NRF24L01(spi, csn, ce, channel=100, payload_size=(32))
     
     msg = "0000000000000" # Default
-#     past_msg = "0000000000000" # Default
+    past_msg = "0000000000000" # Default
     
     state = False
     pitch = 0
@@ -61,23 +61,23 @@ class RFClass:
                 try:
                     self.assignValues(msg)
                     self.msg = msg
-                    # self.past_msg = msg
+                    self.past_msg = msg
                     print(f"Decoded message: {self.msg}")
                     return msg
-                except (UnicodeError, ValueError, TypeError):
+                except (UnicodeError, ValueError, TypeError, IndexError):
                     print("Decoded. Assigning Filed")
-                    self.assignValues(self.msg)
+                    self.assignValues(self.past_msg)
                     # self.assignValues(self.past_msg)
             else:
                 print("Received empty or padding data.")
-        except (UnicodeError, ValueError, TypeError):
+        except (UnicodeError, ValueError, TypeError, IndexError):
             print("Decoding failed")
         #Python doesn't neqed the null terminator but to 32 ensures we don't accidentally truncate any data that was meant to be sent. 
     def assignValues(self, msg: str):
         var = msg.split(', ')
         # state, pritch, roll, yaw, throttle, * = msg.split(', ')
-        
-        self.state = bool(var[0])
+#         print ("msg:", bool(int(var[0])))
+        self.state = bool(int(var[0]))
         self.pitch = int(var[1])
         self.roll = int(var[2])
         self.yaw = int(var[3])
@@ -102,15 +102,15 @@ class RFClass:
         return self.throttle 
 #         
 # 
-rf = RFClass()
-
-while True:
-    utime.sleep(0.1)
-
-    if rf.existsMessage():
-        msg = rf.updateMessage()
-        print(rf.getMessage())
-        print(f'on: {rf.getState()}, pitch: {rf.getPitch()}, roll: {rf.getRoll()}, yaw: {rf.getYaw()}, throttle: {rf.getThrottle()}')
+# rf = RFClass()
+# 
+# while True:
+#     utime.sleep(0.1)
+# 
+#     if rf.existsMessage():
+#         msg = rf.updateMessage()
+#         print(rf.getMessage())
+#         print(f'on: {rf.getState()}, pitch: {rf.getPitch()}, roll: {rf.getRoll()}, yaw: {rf.getYaw()}, throttle: {rf.getThrottle()}')
 #         for char in msg:
 #             print(f"digit: {char}")
 #         print(int(msg[3]))
@@ -123,4 +123,4 @@ while True:
 #                 f.write(msg[0:4] + '\n')
 #             print('Here2')
 
-print('finish')  
+# print('finish')  
