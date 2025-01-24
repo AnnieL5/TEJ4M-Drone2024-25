@@ -46,7 +46,7 @@ rcvdFile = open('rcvd.txt','r')
 period_ms = 20
 max_throttle = int ((2/ period_ms) * 65535)
 min_throttle = int ((1/ period_ms) * 65535)
-init_throttle = 1.35
+init_throttle = 1.1
 goal_throttle = int ((init_throttle/ period_ms) * 65535)
 # offset for each motor
 t1_ofs_throttle = int ((0.035/ period_ms) * 65535)
@@ -56,7 +56,7 @@ t4_ofs_throttle = int ((0.01/ period_ms) * 65535)
 steps = 100  # Define the number of steps
 duty_step = (goal_throttle - min_throttle) // steps
 
-maxThrottleDuration = 4 * 1000 # in ms
+maxThrottleDuration = 120 * 1000 # in ms
 hasTilted = False
 
 on = True # from user input. Starts the drone
@@ -70,13 +70,13 @@ cmd_duty_step = 0
 prev_goal = goal_throttle
 
 # PID Controller values
-pid_pitch_kp:float = 5#5.5
+pid_pitch_kp:float = 7.5#5.5,8.5
 pid_pitch_ki:float = 0#.4
-pid_pitch_kd:float = 0#.5
-pid_roll_kp:float = 2#1.0
+pid_pitch_kd:float = 0.8#0.8
+pid_roll_kp:float = 8.5#1.0.,8.5
 pid_roll_ki:float = 0#.4
-pid_roll_kd:float = 0#.5
-pid_yaw_kp:float = 0#1.0
+pid_roll_kd:float = 0.85#0.8
+pid_yaw_kp:float = 1#1.0
 pid_yaw_ki:float = 0#.1
 pid_yaw_kd:float = 0#.5
 
@@ -123,11 +123,9 @@ try:
     count = 0 # to count how many message received. For debugging
     
     while not takeOff: # wait for take off signal
-        print("waiting..")
         if rf.existsMessage():
             if rf.updateMessage() != None:
                 takeOff = rf.getState()
-                print("Taking off")
     
     while True:
         
@@ -137,7 +135,7 @@ try:
         if rf.existsMessage():
             # newest_throttle: similar to 1.1. newest_goal: after calculation like 4320
             if rf.updateMessage() != None:
-                if rf.getState == 0: # land
+                if rf.getState() == 0: # land
                     takeOff = False
                     landing = True
                 else:
@@ -145,6 +143,7 @@ try:
         
         angle = [(rf.getPitch(), rf.getRoll(), rf.getYaw())[i] - mpu.getAngle()[i] for i in range(3)] # get difference between controller's goal and current angle
                 
+        count += 1
         #loop time
         loop_time = ticks_diff(current_time, previous_time) / 1000.0
         loop_time = max(loop_time, 1e-6)
@@ -202,7 +201,7 @@ try:
             
             if(duty_cycle >= goal_throttle): # if reached goal throttle
                 takeOff = False # Change state 
-                # endHoverTime = ticks_add(current_time, maxThrottleDuration) #find endtime
+                endHoverTime = ticks_add(current_time, maxThrottleDuration) #find endtime
             else:
                 duty_cycle += duty_step # if it has not reach goal throttle, keep increasing speed
                         
@@ -244,8 +243,8 @@ try:
             esc_3.duty_u16(t3)
             esc_4.duty_u16(t4)
             
-            # if(ticks_diff(endHoverTime, current_time) <= 0): # check how long it hovered
-            #     landing = True # change to landing if hovered for enough time
+            if(ticks_diff(endHoverTime, current_time) <= 0): # check how long it hovered
+                  landing = True # change to landing if hovered for enough time
         
         # Save state values for next loop
         roll_last_error = angle[1]
@@ -260,9 +259,12 @@ try:
         mpu.updateAngle()
         # print(str(duty_cycle))
         #print(str(mpu.getAngle()))
-        print(count, [t1,t2,t3,t4], cmd_duty_step, duty_cycle)
+#         print(count, [t1,t2,t3,t4], cmd_duty_step, duty_cycle)
+#         print(f'on: {rf.getState()}, pitch: {rf.getPitch()}, roll: {rf.getRoll()}, yaw: {rf.getYaw()}, throttle: {rf.getThrottle()}')
 #         print(takeOff, changeDutyCycle)
         # write to file - angle then throttle for each motor
+        if count % 100 == 0:
+            print(angle, [t1, t2, t3, t4])
         angleFile.write(f"{angle[0]}, {angle[1]}, {angle[2]}, {current_time}\n")
         throttleFile.write(f"{t1}, {t2}, {t3}, {t4}\n")
         
@@ -288,5 +290,6 @@ except KeyboardInterrupt:
     esc_1.deinit()
     esc_1.deinit()
     esc_1.deinit()
+
 
 

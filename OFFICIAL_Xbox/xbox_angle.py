@@ -1,5 +1,6 @@
 import pygame
 import serial
+from time import sleep
 
 pygame.init()
 joysticks = []
@@ -20,9 +21,9 @@ yawT = 0
 
 max_angle = 15
 
-throttle_increment = 0.01
+throttle_increment = 0.05
 
-arduino = serial.Serial('COM4', 115200)  # Replace 'COM3' with your Arduino's port
+arduino = serial.Serial('COM4 ', 115200)  # Replace 'COM3' with your Arduino's port
 
 def mapFromTo(x,a,b,c,d):
    y=(x-a)/(b-a)*(d-c)+c
@@ -39,7 +40,7 @@ for i in range(0, pygame.joystick.get_count()):
 joystick = joysticks[0]
 
 while keepPlaying:
-    clock.tick(10)
+    clock.tick(1)
     
     # print(arduino.readline())
     message = ""
@@ -62,10 +63,11 @@ while keepPlaying:
             # print(str(on)+str(current_duty_cycle))
         
         elif event.type == pygame.JOYAXISMOTION:
-            pitch = joystick.get_axis(1) # Forward positive
-            roll = joystick.get_axis(0) # Left positive
-            yaw = - joystick.get_axis(2)# Left positive
+            pitch = -joystick.get_axis(1) # Forward positive
+            roll = -joystick.get_axis(0) # Left positive
+            yaw = joystick.get_axis(2)*3# Left positive
 
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
             pitchT = mapFromTo(pitch, -1, 1, -max_angle, max_angle)
             rollT = mapFromTo(roll, -1, 1, -max_angle, max_angle)
             yawT = mapFromTo(yaw, -1, 1, -max_angle, max_angle)
@@ -74,10 +76,15 @@ while keepPlaying:
         
             # print(f'{pitch}, {roll}, {yaw}')
             # print(f'{t1}, {t2}, {t3}, {t4}')
-    message = f'{on}, {pitchT:.0f}, {rollT:.0f}, {yawT:.0f}, {duty_cycle_increment*100:.0f}' 
+            
+    message = f'{on}, {pitchT:.0f}, {rollT:.0f}, {yawT:.0f}, {duty_cycle_increment*100:.0f}, ' 
+#    print(duty_cycle_increment, f'{duty_cycle_increment*100:.0f}')
     print(message)
     
     arduino.write(message.encode())
+    print(arduino.readline())
+    
+    sleep(0.5)
 
 
     # for event in pygame.event.get():
@@ -92,3 +99,4 @@ while keepPlaying:
     #             value = joystick.get_button(i)
     #             if value != 0:
     #                 print(f"Button {i}: {joystick.get_button(i)}")
+
