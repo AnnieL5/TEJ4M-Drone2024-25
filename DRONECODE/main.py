@@ -4,25 +4,26 @@ from MPU_data import MPU6050DATA
 from RFClass import RFClass
 import os
 
-# From 1/12/2025
-# - with a while loop
-# - detects angle instead of angular speed
+# From 1/12/2025 - 1/24/2025
+# - detects angle for emergency stop
 # - with PID
-# - DOWNLOAD THE FILE BEFORE UNPLUGGING THE BATTERY
-# - add in RF message to include controller adjustments
+# - Controller + add in RF message to include controller adjustments
 #     [0] take off/landing, [1:3] pitch, [3:5] roll, [5:7] yaw, [7:9] throttle adjustment (+-0.01 by each click)
+# Analize Data: DOWNLOAD THE FILE BEFORE UNPLUGGING THE BATTERY
 
-# Future: add error value. To be controller - gyro data
-# 		  add pid for yaw & kd
+# Future: Better tune PID and improve the angle calculation algorithm
+
 # LED indication:
 # - end with on: toggled checkRotation()
 # - end with off: finished the entire loop
 
+# Initial Objects
 led = Pin(25, Pin.OUT)
 
 mpu = MPU6050DATA(id=0, sda=12, scl=13)
 rf = RFClass()
 
+# Initialize ESCs
 esc_1 = PWM(Pin(15)) # Top Left - weaker one - changed to pin 15, originally pin 14 
 esc_2 = PWM(Pin(2)) # bottom left - ccw
 esc_3 = PWM(Pin(28)) # Bottom right
@@ -34,15 +35,13 @@ esc_3.freq(50)
 esc_4.freq(50)
 
 # deletes current file
-# if os.path.exists('/angleData.txt'):
-#try commenting out os.remove
 os.remove('/angleData.txt')
 os.remove('/throttleData.txt')
 # Open file to log data
 angleFile = open('angleData.txt', 'w') # mode(r, a, w, x, t,b)
 throttleFile = open('throttleData.txt', 'w')
-rcvdFile = open('rcvd.txt','r')
         
+# Initialize variables
 period_ms = 20
 max_throttle = int ((2/ period_ms) * 65535)
 min_throttle = int ((1/ period_ms) * 65535)
@@ -59,15 +58,11 @@ duty_step = (goal_throttle - min_throttle) // steps
 maxThrottleDuration = 120 * 1000 # in ms
 hasTilted = False
 
-on = True # from user input. Starts the drone
 takeOff = False #phase
 landing = False
+changeDutyCycle = False
 duty_cycle = min_throttle # starts with min throttle
 endHoverTime = 0 # assigns value after takeoff
-changeDutyCycle = False
-newest_goal = 0
-cmd_duty_step = 0
-prev_goal = goal_throttle
 
 # PID Controller values
 pid_pitch_kp:float = 7.5#5.5,8.5
@@ -79,7 +74,6 @@ pid_roll_kd:float = 0.85#0.8
 pid_yaw_kp:float = 1#1.0
 pid_yaw_ki:float = 0#.1
 pid_yaw_kd:float = 0#.5
-
 i_limit = 30 # max value i can reach
 
 roll_last_integral:float = 0.0 # default to 0. Accumulates throughout
@@ -91,29 +85,32 @@ yaw_last_error:float = 0.0
 
 transition_throttle = int ((1.1/ period_ms) * 65535) # when it switch from motor set duty_cycle to adding pid values
 
-def stopAll() -> None:
+# Define functions
+def stopAll() -> None: # stop all motors
     esc_1.duty_u16(min_throttle)
     esc_2.duty_u16(min_throttle)
     esc_3.duty_u16(min_throttle)
     esc_4.duty_u16(min_throttle)
     
 def constrainThrottle(t1, t2, t3, t4): # constrain throttle to between min to max throttle
-    t1 = max(min(t1, max_throttle), min_throttle) # constrain within throttle limits
-    t2 = max(min(t2, max_throttle), min_throttle) # constrain within throttle limits
-    t3 = max(min(t3, max_throttle), min_throttle) # constrain within throttle limits
-    t4 = max(min(t4, max_throttle), min_throttle) # constrain within throttle limits
+    t1 = max(min(t1, max_throttle), min_throttle)
+    t2 = max(min(t2, max_throttle), min_throttle)
+    t3 = max(min(t3, max_throttle), min_throttle)
+    t4 = max(min(t4, max_throttle), min_throttle)
     return t1,t2,t3,t4
 
 try:
 
+    # Turn on the LED
     led.value(1)
 
-    # set all motors to min throttle
+    # set all motors to min throttle for calibration
     esc_1.duty_u16(min_throttle)
     esc_2.duty_u16(min_throttle)
     esc_3.duty_u16(min_throttle)
     esc_4.duty_u16(min_throttle)
     
+    # Wait for the motors to calibrate
     sleep (10)
     
     mpu.calibrateGyro()
@@ -122,9 +119,10 @@ try:
     
     count = 0 # to count how many message received. For debugging
     
-    while not takeOff: # wait for take off signal
+    # wait for take off signal
+    while not takeOff: 
         if rf.existsMessage():
-            if rf.updateMessage() != None:
+            if rf.updateMessage() != None: # Received a message in the correct format
                 takeOff = rf.getState()
     
     while True:
@@ -177,11 +175,6 @@ try:
         t3 = t3_ofs_throttle + int(duty_cycle + pid_pitch + pid_roll + pid_yaw)  # Motor 3
         t4 = t4_ofs_throttle + int(duty_cycle - pid_pitch + pid_roll - pid_yaw)  # Motor 4
 
-        # t1:int = int(duty_cycle - pid_pitch - pid_roll) # - pid_yaw_kp*angle[2]
-        # t2:int = int(duty_cycle + pid_pitch - pid_roll) # + pid_yaw_kp*angle[2] 
-        # t3:int = int(duty_cycle + pid_pitch + pid_roll) # - pid_yaw_kp*angle[2] 
-        # t4:int = int(duty_cycle - pid_pitch + pid_roll) # + pid_yaw_kp*angle[2]
-        
         t1,t2,t3,t4 = constrainThrottle(t1,t2,t3,t4)
         
        
@@ -224,25 +217,15 @@ try:
                 break # Break out of loop if landed
             else:
                 duty_cycle -= duty_step # decrease duty cycle
-                        
-        # elif changeDutyCycle:
-        #     # duty_cycle same during the first run, change afterwards
-        #     esc_1.duty_u16(t1)
-        #     esc_2.duty_u16(t2)
-        #     esc_3.duty_u16(t3)
-        #     esc_4.duty_u16(t4)
-        #     if (cmd_duty_step>0 and duty_cycle >= newest_goal) or (cmd_duty_step<0 and duty_cycle <= newest_goal): # if passed cmd throttle
-        #         changeDutyCycle = False # then it will run else
-        #     else:
-        #         duty_cycle += cmd_duty_step # change duty cycle
-        
+                 
         else:
-            #stay at same throttle 
+            #stay at same duty_cycle + PID adjustments
             esc_1.duty_u16(t1)
             esc_2.duty_u16(t2)
             esc_3.duty_u16(t3)
             esc_4.duty_u16(t4)
             
+            # Set a time limit for hovering
             if(ticks_diff(endHoverTime, current_time) <= 0): # check how long it hovered
                   landing = True # change to landing if hovered for enough time
         
@@ -254,20 +237,20 @@ try:
         pitch_last_integral = pitch_i
         yaw_last_integral = yaw_i
         
-        # For debgugging
-        #mpu.readData()
         mpu.updateAngle()
-        # print(str(duty_cycle))
-        #print(str(mpu.getAngle()))
+        
+        # For debgugging
 #         print(count, [t1,t2,t3,t4], cmd_duty_step, duty_cycle)
 #         print(f'on: {rf.getState()}, pitch: {rf.getPitch()}, roll: {rf.getRoll()}, yaw: {rf.getYaw()}, throttle: {rf.getThrottle()}')
 #         print(takeOff, changeDutyCycle)
-        # write to file - angle then throttle for each motor
-        if count % 100 == 0:
+        if count % 100 == 0: # print every 100 loops
             print(angle, [t1, t2, t3, t4])
+            
+        # Write data to file
         angleFile.write(f"{angle[0]}, {angle[1]}, {angle[2]}, {current_time}\n")
         throttleFile.write(f"{t1}, {t2}, {t3}, {t4}\n")
         
+        # Check if the drone has tilted
         if(mpu.checkRotationAngle()): 
             stopAll() 
             hasTilted = True
@@ -285,11 +268,7 @@ try:
 except KeyboardInterrupt:
     print("Keyboard interrupt")
     stopAll()
-    # print(esc)
     esc_1.deinit()
     esc_1.deinit()
     esc_1.deinit()
     esc_1.deinit()
-
-
-

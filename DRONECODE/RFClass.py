@@ -4,6 +4,8 @@ from nrf24l01 import NRF24L01
 import os
 
 class RFClass: 
+    
+    # Initial values
     #addresses
     pipes = (b'\xe1\xf0\xf0\xf0\xf0', b'\xd2\xf0\xf0\xf0\xf0')
     
@@ -38,11 +40,9 @@ class RFClass:
         self.nrf.open_rx_pipe(1, self.pipes[0])
         self.nrf.start_listening()
 
-        # os.remove('rcvd.txt')
-        # f = open('rcvd.txt', 'a')
-
         print('RX Ready. Waiting for packets...')
 
+    # Check if a message exists
     def existsMessage(self) -> bool:
         #checking for a message on the nrf24l01
         if self.nrf.any():
@@ -50,15 +50,15 @@ class RFClass:
         else:
             return False
         
+    # Update the message. Only returns the message if it is not empty, and in the proper format. Else None
     def updateMessage(self) -> str:
         print('Received something:')
         package = self.nrf.recv()
-        #package_2 = r'package[0:9]'
-        print(package)
+        print(package) # For debugging
         try: 
             if package.strip(b'\x00'):  # Remove padding bytes and check if anything is left
                 msg = package.decode('utf-8')[0:self.msgLength]
-                try:
+                try: # Try to understand the message. Go to except if it is not in the correct format
                     self.assignValues(msg)
                     self.msg = msg
                     self.past_msg = msg
@@ -72,17 +72,19 @@ class RFClass:
                 print("Received empty or padding data.")
         except (UnicodeError, ValueError, TypeError, IndexError):
             print("Decoding failed")
-        #Python doesn't neqed the null terminator but to 32 ensures we don't accidentally truncate any data that was meant to be sent. 
+    
+    # Assign values to the class variables from the message
     def assignValues(self, msg: str):
-        var = msg.split(', ')
-        # state, pritch, roll, yaw, throttle, * = msg.split(', ')
-#         print ("msg:", bool(int(var[0])))
+        var = msg.split(', ') # Split the message into its components
+        
         self.state = bool(int(var[0]))
         self.pitch = int(var[1])
         self.roll = int(var[2])
         self.yaw = int(var[3])
         self.throttle = int(var[4])
 
+    # Return Class variables
+    
     def getMessage(self) -> str:
         return self.msg
 
@@ -100,27 +102,3 @@ class RFClass:
 
     def getThrottle(self) -> int:
         return self.throttle 
-#         
-# 
-# rf = RFClass()
-# 
-# while True:
-#     utime.sleep(0.1)
-# 
-#     if rf.existsMessage():
-#         msg = rf.updateMessage()
-#         print(rf.getMessage())
-#         print(f'on: {rf.getState()}, pitch: {rf.getPitch()}, roll: {rf.getRoll()}, yaw: {rf.getYaw()}, throttle: {rf.getThrottle()}')
-#         for char in msg:
-#             print(f"digit: {char}")
-#         print(int(msg[3]))
-#     # open file in append mode and write the received message
-#         if(msg[0]== "c"):
-#             print('here')
-#             break
-#         else:
-#             with open('rcvd.txt', 'a') as f: #automatically closes file after writing 
-#                 f.write(msg[0:4] + '\n')
-#             print('Here2')
-
-# print('finish')  

@@ -2,6 +2,9 @@ import pygame
 import serial
 from time import sleep
 
+# Program that reads the joystick values and sends them to the Arduino via Serial Communication
+
+# Initialize Variables
 pygame.init()
 joysticks = []
 clock = pygame.time.Clock()
@@ -19,12 +22,14 @@ pitchT = 0
 rollT = 0
 yawT = 0
 
+# Restrictions
 max_angle = 15
-
 throttle_increment = 0.05
 
+# Initialize the Arduino
 arduino = serial.Serial('COM4 ', 115200)  # Replace 'COM3' with your Arduino's port
 
+# Function to map values from one range to another
 def mapFromTo(x,a,b,c,d):
    y=(x-a)/(b-a)*(d-c)+c
    return y
@@ -42,13 +47,12 @@ joystick = joysticks[0]
 while keepPlaying:
     clock.tick(1)
     
-    # print(arduino.readline())
     message = ""
 
     for event in pygame.event.get():
         # The 0 button is the 'a' button, 1 is the 'b' button, 2 is the 'x' button, 3 is the 'y' button
-        # Add the throttle to the current duty cycle
 
+        # On/Off
         if event.type == pygame.JOYBUTTONDOWN:
             if joystick.get_button(4):
                 on = 1
@@ -60,43 +64,22 @@ while keepPlaying:
                 duty_cycle_increment += throttle_increment
             elif joystick.get_button(1):
                 duty_cycle_increment -= throttle_increment
-            # print(str(on)+str(current_duty_cycle))
         
+        # Pitch, Roll, Yaw
         elif event.type == pygame.JOYAXISMOTION:
             pitch = -joystick.get_axis(1) # Forward positive
             roll = -joystick.get_axis(0) # Left positive
             yaw = joystick.get_axis(2)*3# Left positive
-
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
             pitchT = mapFromTo(pitch, -1, 1, -max_angle, max_angle)
             rollT = mapFromTo(roll, -1, 1, -max_angle, max_angle)
             yawT = mapFromTo(yaw, -1, 1, -max_angle, max_angle)
-
-        # constrain within throttle limits
-        
-            # print(f'{pitch}, {roll}, {yaw}')
-            # print(f'{t1}, {t2}, {t3}, {t4}')
             
     message = f'{on}, {pitchT:.0f}, {rollT:.0f}, {yawT:.0f}, {duty_cycle_increment*100:.0f}, ' 
-#    print(duty_cycle_increment, f'{duty_cycle_increment*100:.0f}')
     print(message)
     
+    # Write the message to the Arduino
     arduino.write(message.encode())
     print(arduino.readline())
     
     sleep(0.5)
-
-
-    # for event in pygame.event.get():
-    #     # The 0 button is the 'a' button, 1 is the 'b' button, 2 is the 'x' button, 3 is the 'y' button
-    #     if(event.type == 1536):
-    #         for i in range(4):
-    #             value = joystick.get_axis(i)
-    #             if abs(value)>0.05:
-    #                 print(f"Axis {i}: {joystick.get_axis(i)}")
-    #     else:
-    #         for i in range(8):
-    #             value = joystick.get_button(i)
-    #             if value != 0:
-    #                 print(f"Button {i}: {joystick.get_button(i)}")
-
