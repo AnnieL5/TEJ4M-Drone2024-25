@@ -75,7 +75,7 @@ Do not fly in poor weather conditions such as raining, windy, or thunderstorms
 - Follow the diagram to control the drone. It will emergency stop once the drone has tilted more than 15 degrees in pitch or roll; power cycle to restart. There is also a safety time limit of 60 seconds once the drone takes off (throttle above 1.1).
 
 
-### Camera
+### Camera - Acess the code in the CameraWebServer branch
 **First time use:**
 
     Open Arduino IDE;
