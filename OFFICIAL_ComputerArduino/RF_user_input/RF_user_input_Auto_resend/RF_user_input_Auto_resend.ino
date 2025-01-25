@@ -2,6 +2,11 @@
 #include <nRF24L01.h>
 #include <RF24.h>
 
+/*
+  Code stored in the Arduino. 
+  Receives the controller value through Serial communication and sends it to the Raspberry Pi Pico (drone).
+*/
+
 #define CE_PIN   7
 #define CSN_PIN 8
 
@@ -11,11 +16,9 @@ const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL };
 //setting up nrf24l01 object
 RF24 radio(CE_PIN, CSN_PIN);
 
-//char dataToSend[10] = "Message 0";
+char dataToSend [32]; //one of the characters needs to be null character to terminate the string
 
-const int length = 32;
-char dataToSend [length]; //one of the characters needs to be null character to terminate the string
-
+// Variable to store if the message was sent
 bool rslt = false;
 
 void setup() {
@@ -23,6 +26,7 @@ void setup() {
 
     Serial.println("Arduino TX Starting");
 
+    // Wait for the radio to initialize
     if (!radio.begin()) {
       Serial.println("Radio not initialized!");
       while (!radio.begin()) {}
@@ -40,10 +44,13 @@ void setup() {
 }
 
 void loop() {
+  // Wait until the serial port is available
   while (Serial.available() == 0) { 
   }
 
+  // Read the serial input
   String userInput = Serial.readString();
+
   //Count the length of string + null character (if we were to convert to char)
   int str_len = userInput.length() + 1; 
 
@@ -53,6 +60,7 @@ void loop() {
 	  //sending message
     rslt = radio.write(&dataToSend, sizeof(dataToSend));
 
+    // Resend the message if it was not sent
     while(!rslt){
       Serial.print("Data Sent - ");
       Serial.print(userInput);
@@ -71,5 +79,5 @@ void loop() {
     Serial.println("Message too long, try again");
   }
     //sleeping for 1 second
-    delay(1000); //why does it need this delay
+    delay(1000);
 }
